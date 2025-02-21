@@ -6,7 +6,7 @@ interface HeaderProps {
   isMobile: boolean
 }
 
-export const Header = ({ isMenuOpen, setIsMenuOpen, isMobile }: HeaderProps) => {
+export const Header = ({ isMenuOpen, setIsMenuOpen }: HeaderProps) => {
   return (
     <header className="fixed top-0 left-0 right-0 bg-[#5850EC] text-white z-30">
       <div className="max-w-7xl mx-auto">

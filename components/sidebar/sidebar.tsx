@@ -2,6 +2,7 @@ import type React from "react"
 import { Crown, Users, Bell, Clock, Heart, Filter } from "lucide-react"
 import ImageFallback from "../image-fallback"
 import { SidebarItem } from "./sidebar-item"
+import { RefObject } from "react"
 
 const menuItems = [
   { label: "My Profile", icon: <Users className="w-5 h-5" /> },
@@ -14,7 +15,7 @@ const menuItems = [
 interface SidebarProps {
   isMenuOpen: boolean
   isMobile: boolean
-  sidebarRef: any
+  sidebarRef: RefObject<HTMLDivElement | null>
 }
 
 export const Sidebar = ({ isMenuOpen, isMobile, sidebarRef }: SidebarProps) => {
