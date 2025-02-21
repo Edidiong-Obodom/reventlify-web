@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useRef, useState, useEffect } from "react"
-import { Sidebar } from "@/components/sidebar/sidebar"
-import { Header } from "@/components/header/header"
-import { FeaturedEvent } from "@/components/events/featured-event"
-import { CategoriesSection } from "@/components/categories/categories-section"
-import { EventsSection } from "@/components/events/events-section"
+import { useRef, useState, useEffect } from "react";
+import { Sidebar } from "@/components/sidebar/sidebar";
+import { Header } from "@/components/header/header";
+import { FeaturedEvent } from "@/components/events/featured-event";
+import { CategoriesSection } from "@/components/categories/categories-section";
+import { EventsSection } from "@/components/events/events-section";
 
 const events = [
   {
@@ -41,13 +41,14 @@ const events = [
   {
     id: 4,
     title: "Food & Wine Festival",
-    image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+    image:
+      "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
     location: "Waterfront Park, San Francisco",
     attendees: 100,
     price: "$120",
     time: "4:00 PM",
   },
-]
+];
 
 const categories = [
   {
@@ -80,37 +81,39 @@ const categories = [
     icon: "⚽",
     color: "bg-[#A280FF]",
   },
-]
+];
 
 const featuredEvent = {
   title: "Summer Music Festival 2024",
-  image: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+  image:
+    "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
   date: "15-17 JUNE",
   location: "Central Park, New York",
   attendees: 1500,
-  description: "The biggest music festival of the year featuring top artists from around the world.",
-}
+  description:
+    "The biggest music festival of the year featuring top artists from around the world.",
+};
 
 const Page = () => {
-  const sidebarRef = useRef<HTMLDivElement>(null)
-  const [isMobile, setIsMobile] = useState(false)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768)
+      setIsMobile(window.innerWidth < 768);
       // if (window.innerWidth >= 768) {
       //   setIsMenuOpen(true)
       // }
-    }
+    };
 
-    handleResize()
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen md:relative bg-gray-50 eddyContainerFull">
       {/* Backdrop Overlay */}
       {isMobile && isMenuOpen && (
         <div
@@ -119,12 +122,21 @@ const Page = () => {
         />
       )}
 
-      <Sidebar isMenuOpen={isMenuOpen} isMobile={isMobile} sidebarRef={sidebarRef} />
+      <Sidebar
+        isMenuOpen={isMenuOpen}
+        isMobile={isMobile}
+        sidebarRef={sidebarRef}
+      />
 
-      <div className="flex-1 eddyContainer">
-        <Header isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} isMobile={isMobile} />
+      <div className="flex-1">
+        <Header
+          isMenuOpen={isMenuOpen}
+          setIsMenuOpen={setIsMenuOpen}
+          isMobile={isMobile}
+        />
+        {/* <div className="hidden md:block md:w-[10%]"></div> */}
 
-        <main className="max-w-7xl mx-auto p-4 md:p-8 mt-16">
+        <main className="max-w-7xl mx-auto p-4 md:p-8 md:w-[90%] md:h-[87vh] overflow-y-scroll scrollbar-hide mt-16">
           {" "}
           {/* Added mt-16 for header spacing */}
           <FeaturedEvent event={featuredEvent} />
@@ -133,8 +145,7 @@ const Page = () => {
         </main>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Page
-
+export default Page;

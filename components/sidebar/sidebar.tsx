@@ -25,7 +25,7 @@ export const Sidebar = ({ isMenuOpen, isMobile, sidebarRef }: SidebarProps) => {
       className={`${
         isMobile
           ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"}`
-          : "fixed top-0 h-screen z-10 md:pt-12"
+          : "absolute left-0 top-0 h-screen z-10 md:pt-12"
       } flex flex-col bg-white border-r border-gray-200 flex-shrink-0 transition-all duration-300 ${
         !isMobile && !isMenuOpen ? "w-20" : "w-64"
       }`}
