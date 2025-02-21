@@ -31,7 +31,7 @@ export const Sidebar = ({ isMenuOpen, isMobile, sidebarRef }: SidebarProps) => {
       }`}
     >
       {/* Sidebar Header */}
-      <div className="p-6 border-b border-gray-100">
+      <div className="p-6 md:mt-3 md:mr-3 border-b border-gray-100">
         <div className="flex flex-col items-center">
           <div className="w-20 h-20 rounded-full overflow-hidden mb-4 ring-2 ring-offset-2 ring-[#5850EC]">
             <ImageFallback

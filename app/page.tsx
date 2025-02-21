@@ -136,7 +136,7 @@ const Page = () => {
         />
         {/* <div className="hidden md:block md:w-[10%]"></div> */}
 
-        <main className="max-w-7xl mx-auto p-4 md:p-8 md:w-[90%] md:h-[87vh] overflow-y-scroll scrollbar-hide mt-16">
+        <main className="max-w-7xl mx-auto p-4 md:p-8 md:w-[90%] md:mr-0 md:h-[87vh] overflow-y-scroll scrollbar-hide mt-16">
           {" "}
           {/* Added mt-16 for header spacing */}
           <FeaturedEvent event={featuredEvent} />
