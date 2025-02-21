@@ -78,7 +78,7 @@ export const Sidebar = ({ isMenuOpen, isMobile, sidebarRef }: SidebarProps) => {
           <span
             className={`transition-opacity duration-300 ${!isMobile && !isMenuOpen ? "opacity-0 w-0" : "opacity-100"}`}
           >
-            Upgrade Pro
+            Affiliate
           </span>
         </button>
       </div>
