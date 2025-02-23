@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useFormState, useFormStatus } from "react-dom";
 import { login } from "@/app/auth/01-auth";
+import Link from "next/link";
 
 const SigninForm = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -85,10 +86,23 @@ const SigninForm = () => {
 
       <button
         type="submit"
-        className="flex w-full items-center justify-center rounded-md bg-[#6366F1] px-4 py-2 text-sm font-medium text-white hover:bg-[#5558DD] focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:ring-offset-2"
+        className="flex w-full items-center justify-center rounded-full bg-[#6366F1] px-4 py-2 text-sm font-medium text-white hover:bg-[#5558DD] focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:ring-offset-2"
       >
-        SIGN IN
-        <ArrowRight className="ml-2 h-4 w-4" />
+        <span className="flex-1 text-center font-semibold">SIGN IN</span>
+        <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </div>
       </button>
 
       <div className="relative">
@@ -123,7 +137,9 @@ const SigninForm = () => {
 
       <p className="text-center text-sm text-gray-600">
         Don't have an account?{" "}
-        <button className="text-[#6366F1] hover:underline">Sign up</button>
+        <Link href="/signup" className="text-[#6366F1] hover:underline">
+          Sign up
+        </Link>
       </p>
     </form>
   );
