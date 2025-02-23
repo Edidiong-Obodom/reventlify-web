@@ -1,29 +1,41 @@
 import "server-only";
 
 import type { LoginResponse, SessionPayload } from "@/app/auth/definitions";
-import { verify } from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { jwtVerify, SignJWT } from "jose";
 
 const secretKey = process.env.SECRET;
+const key = new TextEncoder().encode(secretKey);
 
-export async function decrypt(session: string | undefined = "") {
+export async function encrypt(payload: Partial<SessionPayload>) {
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("3hr")
+    .sign(key);
+}
+
+export const decrypt = async (
+  session: string | undefined = ""
+): Promise<Partial<SessionPayload> | null> => {
   try {
-    let payload: Partial<SessionPayload> = {};
-    verify(session, secretKey as string, (error, data) => {
-      payload = data as Partial<SessionPayload>;
+    const { payload } = await jwtVerify(session, key, {
+      algorithms: ["HS256"],
     });
-    return payload;
+    return payload as unknown as Partial<SessionPayload>;
   } catch (error) {
+    console.log(error);
     return null;
   }
-}
+};
 
 export async function createSession(payload: LoginResponse) {
   const expiresAt = new Date(payload.expiresAt * 1000);
-  const session = payload.data.token;
+  const dataToEncrypt: Partial<SessionPayload> = { ...payload.user, expiresAt };
+  const session = await encrypt(dataToEncrypt);
 
-  (await cookies()).set("session", session as string, {
+  (await cookies()).set("session", session, {
     httpOnly: true,
     secure: true,
     expires: expiresAt,
@@ -33,6 +45,12 @@ export async function createSession(payload: LoginResponse) {
 
   redirect("/dashboard");
 }
+
+export const userSession = async () => {
+  const cookie = (await cookies()).get("session")?.value;
+  const session = await decrypt(cookie);
+  return session;
+};
 
 export async function verifySession() {
   const cookie = (await cookies()).get("session")?.value;

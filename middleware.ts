@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decrypt } from "@/app/auth/02-stateless-session";
+import { decrypt, userSession } from "@/app/auth/02-stateless-session";
 import { cookies } from "next/headers";
 
 // 1. Specify protected and public routes
@@ -13,8 +13,7 @@ export default async function middleware(req: NextRequest) {
   const isPublicRoute = publicRoutes.includes(path);
 
   // 3. Decrypt the session from the cookie
-  const cookie = (await cookies()).get("session")?.value;
-  const session = await decrypt(cookie);
+  const session = await userSession();
 
   // 4. Redirect
   if (isProtectedRoute && !session?.user) {

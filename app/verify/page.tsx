@@ -70,7 +70,7 @@ export default function VerificationScreen() {
                 Verification
               </h1>
               <p className="text-lg text-[#1A1B1E]">
-                We've sent the verification
+                We have sent the verification
                 <br />
                 code to edijay17@gmail.com
               </p>

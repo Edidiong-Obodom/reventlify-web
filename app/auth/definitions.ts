@@ -30,7 +30,7 @@ export interface Permission {
   // Add more properties if necessary
 }
 
-export interface SessionPayload {
+export type SessionPayload = {
   user: string;
   email: string;
   firstName: string;
@@ -38,7 +38,8 @@ export interface SessionPayload {
   userName: string;
   nationality: string;
   token: string;
-  permissions: Permission; // Array of Permission objects
+  permissions: Permission;
+  expiresAt: Date;
 }
 
 export type FormState =
@@ -54,6 +55,6 @@ export type FormState =
 
 export type LoginResponse = {
   auth: boolean;
-  data: Partial<SessionPayload>;
+  user: Partial<SessionPayload>;
   expiresAt: number;
 };

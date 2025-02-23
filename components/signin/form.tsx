@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
-import { useFormState, useFormStatus } from "react-dom";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { useFormState } from "react-dom";
 import { login } from "@/app/auth/01-auth";
 import Link from "next/link";
 
@@ -136,7 +136,7 @@ const SigninForm = () => {
       </div> */}
 
       <p className="text-center text-sm text-gray-600">
-        Don't have an account?{" "}
+        Don&apos;t have an account?{" "}
         <Link href="/signup" className="text-[#6366F1] hover:underline">
           Sign up
         </Link>
