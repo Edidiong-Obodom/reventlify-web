@@ -3,12 +3,6 @@
 @tailwind utilities;
 
 
-.eddyNav {
-  @apply px-6 py-8 mx-auto max-w-[400px] md:max-w-[1150px];
-}
-.eddyContainer {
-  @apply md:px-3 md:mx-auto md:max-w-[1120px];
-}
 .eddyContainerFull {
   @apply md:px-3 md:mx-auto md:max-w-[1200px];
 }
@@ -16,9 +10,7 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
-body{
-  @apply scrollbar-hide;
-}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
