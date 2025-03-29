@@ -2,17 +2,38 @@
 
 import { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { useFormState } from "react-dom";
-import { login } from "@/app/auth/01-auth";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 const SigninForm = () => {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [state, action] = useFormState(login, undefined);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    if (res?.error) {
+      setError("Invalid email or password");
+    } else {
+      router.push("/dashboard"); // Redirect to dashboard on success
+    }
+  };
 
   return (
-    <form className="space-y-6" action={action}>
+    <form className="space-y-6" onSubmit={handleSubmit}>
+      {error && <p className="text-red-500 text-sm text-center">{error}</p>}
       <h2 className="text-3xl font-semibold text-gray-900">Sign in</h2>
 
       <div className="space-y-4">
@@ -22,13 +43,13 @@ const SigninForm = () => {
             id="email"
             name="email"
             type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             placeholder="abc@email.com"
+            required
             className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 pl-10 text-sm outline-none focus:border-[#6366F1] focus:ring-1 focus:ring-[#6366F1]"
           />
         </div>
-        {state?.errors?.email && (
-          <p className="text-sm text-red-500">{state.errors.email}</p>
-        )}
 
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
@@ -37,6 +58,9 @@ const SigninForm = () => {
             name="password"
             type={showPassword ? "text" : "password"}
             placeholder="Your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
             className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 pl-10 pr-10 text-sm outline-none focus:border-[#6366F1] focus:ring-1 focus:ring-[#6366F1]"
           />
           <button
@@ -54,9 +78,6 @@ const SigninForm = () => {
             </span>
           </button>
         </div>
-        {state?.message && (
-          <p className="text-sm text-red-500">{state.message}</p>
-        )}
       </div>
 
       <div className="flex items-center justify-between">

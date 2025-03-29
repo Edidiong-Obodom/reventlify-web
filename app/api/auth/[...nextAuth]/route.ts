@@ -19,7 +19,7 @@ const authOptions: NextAuthOptions = {
         }
 
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/login`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/auth/login`,
           {
             method: "POST",
             headers: {
@@ -31,12 +31,11 @@ const authOptions: NextAuthOptions = {
             }),
           }
         );
+        const user = await res.json();
 
         if (!res.ok) {
           throw new Error("Invalid credentials");
         }
-
-        const user = await res.json();
 
         if (user) {
           return {
@@ -55,17 +54,17 @@ const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.user = {
-          id: user.id,
-          email:  user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-        }
-        // token.id = user.id;
-        // token.email = user.email;
-        // token.firstName = user.firstName;
-        // token.lastName = user.lastName;
-        // token.accessToken = user.token; // Ensure token exists
+        // token.user = {
+        //   id: user.id,
+        //   email:  user.email,
+        //   firstName: user.firstName,
+        //   lastName: user.lastName,
+        // }
+        token.id = user.id;
+        token.email = user.email;
+        token.firstName = user.firstName;
+        token.lastName = user.lastName;
+        token.accessToken = user.token; // Ensure token exists
       }
       return token;
     },
