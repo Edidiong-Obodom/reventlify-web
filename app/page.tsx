@@ -6,6 +6,7 @@ import { Header } from "@/components/header/header";
 import { FeaturedEvent } from "@/components/events/featured-event";
 import { CategoriesSection } from "@/components/categories/categories-section";
 import { EventsSection } from "@/components/events/events-section";
+import { useSession } from "next-auth/react";
 
 const events = [
   {
@@ -95,13 +96,18 @@ const featuredEvent = {
 };
 
 const Page = () => {
+  const { data: session } = useSession();
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const [isSet, setIsSet] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
+      console.log("session:: ", session);
+      setIsSet(true)
+
       // if (window.innerWidth >= 768) {
       //   setIsMenuOpen(true)
       // }
@@ -112,6 +118,7 @@ const Page = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  if(isSet){
   return (
     <div className="flex min-h-screen md:relative bg-gray-50 eddyContainerFull">
       {/* Backdrop Overlay */}
@@ -145,7 +152,8 @@ const Page = () => {
         </main>
       </div>
     </div>
-  );
+  ); 
+} else{return ""}
 };
 
 export default Page;
