@@ -1,6 +1,6 @@
 import EventDetailPage from "@/components/events/details";
 
-export default function EventDetail({ params }: { params: { id: string } }) {
+export default function EventDetail() {
     return <EventDetailPage />
   }
   
