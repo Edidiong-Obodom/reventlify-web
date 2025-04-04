@@ -7,6 +7,8 @@ import { FeaturedEvent } from "@/components/events/featured-event";
 import { CategoriesSection } from "@/components/categories/categories-section";
 import { EventsSection } from "@/components/events/events-section";
 import { useSession } from "next-auth/react";
+import { NonAuthHeader } from "@/components/header/non-auth-header";
+import { NonAuthSidebar } from "@/components/sidebar/non-auth-sidebar";
 
 const events = [
   {
@@ -106,7 +108,7 @@ const Page = () => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
       console.log("session:: ", session);
-      setIsSet(true)
+      setIsSet(true);
 
       // if (window.innerWidth >= 768) {
       //   setIsMenuOpen(true)
@@ -118,42 +120,64 @@ const Page = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  if(isSet){
-  return (
-    <div className="flex min-h-screen md:relative bg-gray-50 eddyContainerFull">
-      {/* Backdrop Overlay */}
-      {isMobile && isMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
-          onClick={() => setIsMenuOpen(false)}
-        />
-      )}
+  if (isSet) {
+    return (
+      <div className="flex min-h-screen md:relative bg-gray-50 eddyContainerFull">
+        {/* Backdrop Overlay */}
+        {isMobile && isMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
+            onClick={() => setIsMenuOpen(false)}
+          />
+        )}
 
-      <Sidebar
-        isMenuOpen={isMenuOpen}
-        isMobile={isMobile}
-        sidebarRef={sidebarRef}
-      />
+        {session ? (
+          <Sidebar
+            isMenuOpen={isMenuOpen}
+            isMobile={isMobile}
+            sidebarRef={sidebarRef}
+          />
+        ) : (
+          <NonAuthSidebar
+            isMenuOpen={isMenuOpen}
+            isMobile={isMobile}
+            sidebarRef={sidebarRef}
+          />
+        )}
 
-      <div className="flex-1">
-        <Header
-          isMenuOpen={isMenuOpen}
-          setIsMenuOpen={setIsMenuOpen}
-          isMobile={isMobile}
-        />
-        {/* <div className="hidden md:block md:w-[10%]"></div> */}
+        <div className="flex-1">
+          {session ? (
+            <Header
+              isMenuOpen={isMenuOpen}
+              setIsMenuOpen={setIsMenuOpen}
+              isMobile={isMobile}
+            />
+          ) : (
+            <NonAuthHeader
+              isMenuOpen={isMenuOpen}
+              setIsMenuOpen={setIsMenuOpen}
+              isMobile={isMobile}
+            />
+          )}
+          {/* <div className="hidden md:block md:w-[10%]"></div> */}
 
-        <main className="max-w-7xl mx-auto p-4 md:p-8 md:w-[90%] md:mr-0 md:h-[87vh] overflow-y-scroll scrollbar-hide mt-16">
-          {" "}
-          {/* Added mt-16 for header spacing */}
-          <FeaturedEvent event={featuredEvent} />
-          <CategoriesSection categories={categories} />
-          <EventsSection events={events} />
-        </main>
+          <main
+            className={`max-w-7xl mx-auto p-4 md:p-8 md:w-[90%] md:h-[87vh] overflow-y-scroll scrollbar-hide mt-16${
+              session ? " md:mr-0" : ""
+            }`}
+          >
+            {" "}
+            {/* Added mt-16 for header spacing */}
+            <FeaturedEvent event={featuredEvent} />
+            <CategoriesSection categories={categories} />
+            <EventsSection events={events} />
+          </main>
+        </div>
       </div>
-    </div>
-  ); 
-} else{return ""}
+    );
+  } else {
+    return "";
+  }
 };
 
 export default Page;

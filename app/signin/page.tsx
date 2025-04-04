@@ -13,7 +13,7 @@ export default function LoginPage() {
             </div>
           </div>
           <h1 className="mt-4 text-3xl font-semibold text-gray-900">
-            Reventlify
+            Ventasy
           </h1>
         </div>
 

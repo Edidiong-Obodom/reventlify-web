@@ -27,7 +27,7 @@ const SigninForm = () => {
     if (res?.error) {
       setError("Invalid email or password");
     } else {
-      router.push("/dashboard"); // Redirect to dashboard on success
+      router.push("/"); // Redirect to dashboard on success
     }
   };
 

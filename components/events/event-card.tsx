@@ -1,16 +1,17 @@
-import { Clock, Heart, MapPin } from "lucide-react"
-import ImageFallback from "../image-fallback"
+import { Clock, Heart, MapPin } from "lucide-react";
+import ImageFallback from "../image-fallback";
+import Link from "next/link";
 
 interface EventCardProps {
   event: {
-    id: number
-    title: string
-    image: string
-    location: string
-    attendees: number
-    price: string
-    time: string
-  }
+    id: number;
+    title: string;
+    image: string;
+    location: string;
+    attendees: number;
+    price: string;
+    time: string;
+  };
 }
 
 export const EventCard = ({ event }: EventCardProps) => {
@@ -36,13 +37,23 @@ export const EventCard = ({ event }: EventCardProps) => {
         <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
           <Clock className="w-4 h-4" />
           <span>{event.time}</span>
-          <span className="px-2 py-0.5 bg-[#5850EC]/10 text-[#5850EC] rounded-full font-medium">{event.price}</span>
+          <span className="px-2 py-0.5 bg-[#5850EC]/10 text-[#5850EC] rounded-full font-medium">
+            {event.price}
+          </span>
         </div>
-        <h3 className="font-bold text-lg mb-2 hover:text-[#5850EC] cursor-pointer transition-colors">{event.title}</h3>
+        <Link
+          href="/events/view/2"
+          className="font-bold text-lg mb-2 hover:text-[#5850EC] cursor-pointer transition-colors"
+        >
+          {event.title}
+        </Link>
         <div className="flex items-center gap-2 mb-3">
           <div className="flex -space-x-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="w-6 h-6 rounded-full border-2 border-white overflow-hidden">
+              <div
+                key={i}
+                className="w-6 h-6 rounded-full border-2 border-white overflow-hidden"
+              >
                 <ImageFallback
                   src={`https://i.pravatar.cc/100?img=${i}`}
                   fallbackSrc="/placeholder.svg?height=24&width=24"
@@ -62,6 +73,5 @@ export const EventCard = ({ event }: EventCardProps) => {
         </div>
       </div>
     </div>
-  )
-}
-
+  );
+};
