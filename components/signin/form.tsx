@@ -13,8 +13,10 @@ const SigninForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    setLoading(true);
     e.preventDefault();
     setError("");
 
@@ -25,8 +27,10 @@ const SigninForm = () => {
     });
 
     if (res?.error) {
+      setLoading(false);
       setError("Invalid email or password");
     } else {
+      setLoading(false);
       router.push("/"); // Redirect to dashboard on success
     }
   };
@@ -109,7 +113,9 @@ const SigninForm = () => {
         type="submit"
         className="flex w-full items-center justify-center rounded-full bg-[#6366F1] px-4 py-2 text-sm font-medium text-white hover:bg-[#5558DD] focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:ring-offset-2"
       >
-        <span className="flex-1 text-center font-semibold">SIGN IN</span>
+        <span className="flex-1 text-center font-semibold">
+          {loading ? "LOADING..." : "SIGN IN"}
+        </span>
         <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
           <svg
             width="16"

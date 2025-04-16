@@ -2,6 +2,7 @@
 
 import { Menu, Search, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface NonAuthHeaderProps {
   isMenuOpen: boolean;
@@ -14,6 +15,11 @@ export const NonAuthHeader = ({
   setIsMenuOpen,
   isMobile,
 }: NonAuthHeaderProps) => {
+  const router = useRouter();
+
+  const handleFocus = () => {
+    router.push("/events/search"); // replace with your desired route
+  };
   return (
     <header className="fixed top-0 left-0 right-0 bg-[#5850EC] text-white z-30">
       <div className="max-w-7xl mx-auto">
@@ -41,6 +47,7 @@ export const NonAuthHeader = ({
               <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60" />
               <input
                 type="text"
+                onFocus={handleFocus}
                 placeholder="Search events..."
                 className="w-full bg-white/10 rounded-full pl-10 pr-4 py-2 text-white placeholder-white/60 focus:outline-none focus:bg-white/20 transition-colors"
               />
@@ -70,7 +77,12 @@ export const NonAuthHeader = ({
           </div>
 
           {/* Mobile Search Button */}
-          <button className="md:hidden">
+          <button
+            className="md:hidden"
+            type="button"
+            onClick={handleFocus}
+            onKeyDown={handleFocus}
+          >
             <Search className="w-6 h-6" />
           </button>
         </div>

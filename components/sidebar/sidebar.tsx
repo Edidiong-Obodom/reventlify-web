@@ -1,21 +1,55 @@
-import type React from "react"
-import { Crown, Users, Bell, Clock, Heart, Filter } from "lucide-react"
-import ImageFallback from "../image-fallback"
-import { SidebarItem } from "./sidebar-item"
-import { RefObject } from "react"
+import type React from "react";
+import {
+  Crown,
+  Users,
+  Bell,
+  Clock,
+  Heart,
+  ImagePlus,
+  Settings,
+} from "lucide-react";
+import ImageFallback from "../image-fallback";
+import { SidebarItem } from "./sidebar-item";
+import { RefObject } from "react";
 
 const menuItems = [
-  { label: "My Profile", icon: <Users className="w-5 h-5" /> },
-  { label: "Messages", icon: <Bell className="w-5 h-5" />, badge: 3 },
-  { label: "Calendar", icon: <Clock className="w-5 h-5" /> },
-  { label: "Bookmarks", icon: <Heart className="w-5 h-5" /> },
-  { label: "Settings", icon: <Filter className="w-5 h-5" /> },
-]
+  {
+    label: "My Profile",
+    link: "/profile",
+    icon: <Users className="w-5 h-5" />,
+  },
+  {
+    label: "Notifications",
+    link: "/notifications",
+    icon: <Bell className="w-5 h-5" />,
+    badge: 3,
+  },
+  {
+    label: "Calendar",
+    link: "/create-event",
+    icon: <Clock className="w-5 h-5" />,
+  },
+  {
+    label: "Bookmarks",
+    link: "/create-event",
+    icon: <Heart className="w-5 h-5" />,
+  },
+  {
+    label: "Create Event",
+    link: "/events/create",
+    icon: <ImagePlus className="w-5 h-5" />,
+  },
+  // {
+  //   label: "Settings",
+  //   link: "/create-event",
+  //   icon: <Settings className="w-5 h-5" />,
+  // },
+];
 
 interface SidebarProps {
-  isMenuOpen: boolean
-  isMobile: boolean
-  sidebarRef: RefObject<HTMLDivElement | null>
+  isMenuOpen: boolean;
+  isMobile: boolean;
+  sidebarRef: RefObject<HTMLDivElement | null>;
 }
 
 export const Sidebar = ({ isMenuOpen, isMobile, sidebarRef }: SidebarProps) => {
@@ -24,7 +58,9 @@ export const Sidebar = ({ isMenuOpen, isMobile, sidebarRef }: SidebarProps) => {
       ref={sidebarRef}
       className={`${
         isMobile
-          ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"}`
+          ? `fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ${
+              isMenuOpen ? "translate-x-0" : "-translate-x-full"
+            }`
           : "absolute left-0 top-0 h-screen z-10 md:pt-12"
       } flex flex-col bg-white border-r border-gray-200 flex-shrink-0 transition-all duration-300 ${
         !isMobile && !isMenuOpen ? "w-20" : "w-64"
@@ -44,7 +80,9 @@ export const Sidebar = ({ isMenuOpen, isMobile, sidebarRef }: SidebarProps) => {
             />
           </div>
           <h2
-            className={`text-xl font-semibold transition-opacity duration-300 ${!isMobile && !isMenuOpen ? "opacity-0" : "opacity-100"}`}
+            className={`text-xl font-semibold transition-opacity duration-300 ${
+              !isMobile && !isMenuOpen ? "opacity-0" : "opacity-100"
+            }`}
           >
             John Doe
           </h2>
@@ -60,6 +98,7 @@ export const Sidebar = ({ isMenuOpen, isMobile, sidebarRef }: SidebarProps) => {
               label={item.label}
               icon={item.icon}
               badge={item.badge}
+              link={item.link}
               isMenuOpen={isMenuOpen}
               isMobile={isMobile}
             />
@@ -76,13 +115,14 @@ export const Sidebar = ({ isMenuOpen, isMobile, sidebarRef }: SidebarProps) => {
         >
           <Crown className="w-5 h-5" />
           <span
-            className={`transition-opacity duration-300 ${!isMobile && !isMenuOpen ? "opacity-0 w-0" : "opacity-100"}`}
+            className={`transition-opacity duration-300 ${
+              !isMobile && !isMenuOpen ? "opacity-0 w-0" : "opacity-100"
+            }`}
           >
             Affiliate
           </span>
         </button>
       </div>
     </div>
-  )
-}
-
+  );
+};

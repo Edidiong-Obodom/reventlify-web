@@ -8,13 +8,18 @@ import {
   UserPlus,
 } from "lucide-react";
 import { SidebarItem } from "./sidebar-item";
+import Link from "next/link";
 
 const menuItems = [
-  { label: "Home", icon: <Home className="w-5 h-5" /> },
-  { label: "Browse Events", icon: <Calendar className="w-5 h-5" /> },
-  { label: "Create Events", icon: <Calendar className="w-5 h-5" /> },
-  { label: "Help Center", icon: <HelpCircle className="w-5 h-5" /> },
-  { label: "About Us", icon: <Info className="w-5 h-5" /> },
+  { label: "Home", link: "/", icon: <Home className="w-5 h-5" /> },
+  { label: "Browse Events", link: "/", icon: <Calendar className="w-5 h-5" /> },
+  {
+    label: "Create Events",
+    link: "/events/create",
+    icon: <Calendar className="w-5 h-5" />,
+  },
+  { label: "Help Center", link: "/", icon: <HelpCircle className="w-5 h-5" /> },
+  { label: "About Us", link: "/", icon: <Info className="w-5 h-5" /> },
 ];
 
 interface NonAuthSidebarProps {
@@ -59,6 +64,7 @@ export const NonAuthSidebar = ({
               key={item.label}
               label={item.label}
               icon={item.icon}
+              link={item.link}
               isMenuOpen={isMenuOpen}
               isMobile={isMobile}
             />
@@ -68,7 +74,8 @@ export const NonAuthSidebar = ({
 
       {/* Fixed Bottom Section */}
       <div className="p-4 border-t border-gray-100 bg-white space-y-2">
-        <button
+        <Link
+          href="/signin"
           className={`w-full bg-white border border-[#5850EC] text-[#5850EC] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#5850EC]/5 transition-all ${
             !isMobile && !isMenuOpen ? "p-3" : ""
           }`}
@@ -81,9 +88,10 @@ export const NonAuthSidebar = ({
           >
             Log In
           </span>
-        </button>
+        </Link>
 
-        <button
+        <Link
+          href="/signup"
           className={`w-full bg-[#5850EC] text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#6C63FF] transition-all ${
             !isMobile && !isMenuOpen ? "p-3" : ""
           }`}
@@ -96,7 +104,7 @@ export const NonAuthSidebar = ({
           >
             Sign Up
           </span>
-        </button>
+        </Link>
       </div>
     </div>
   );

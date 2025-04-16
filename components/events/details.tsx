@@ -115,7 +115,7 @@ export default function EventDetailPage({
         {/* Mobile Header - Only visible on mobile */}
         <div className="absolute top-0 left-0 right-0 flex justify-between items-center p-4 md:hidden">
           <Link
-            href="/events"
+            href="/"
             className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-sm"
           >
             <ArrowLeft className="w-5 h-5 text-white" />
