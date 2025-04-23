@@ -2,13 +2,12 @@
 
 import type React from "react";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,
   Calendar,
   Clock,
   MapPin,
-  DollarSign,
   User,
   Tag,
   AlignLeft,
@@ -16,52 +15,104 @@ import {
   X,
   Upload,
   Check,
+  Sofa,
+  CirclePlus,
+  Trash2,
+  Save,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { categories, countries, nigerianLGAs, states } from "@/lib/constants";
+import { randomNumber } from "@/lib";
+
+interface LGA {
+  id: number;
+  name: string;
+  state_id: number;
+  state_code: string;
+  state_name: string;
+  country_id: number;
+  country_code: string;
+  country_name: string;
+  latitude: number;
+  longitude: number;
+  wikiDataId: string;
+}
+
+interface Pricing {
+  pricingName: string;
+  pricingTotalSeats: number;
+  pricingAmount?: number;
+  saved?: boolean;
+}
 
 interface EventFormData {
-  title: string;
-  date: string;
-  startTime: string;
-  endTime: string;
+  regimeName: string;
+  regimeStartDate: string;
+  regimeEndDate: string;
+  regimeStartTime: string;
+  regimeEndTime: string;
   location: string;
-  address: string;
-  price: string;
+  regimeAddress: string;
+  price: number;
+  regimePricing: Pricing[];
   organizer: string;
-  category: string;
-  description: string;
+  regimeType: string;
+  regimeCountry: string;
+  regimeState: string;
+  regimeCity: string;
+  regimeDescription: string;
+  regimeAffiliate: boolean;
+  regimeMediaBase64: string;
+  regimeWithdrawalPin: string;
 }
 
 const initialFormData: EventFormData = {
-  title: "",
-  date: "",
-  startTime: "",
-  endTime: "",
+  regimeName: "",
+  regimeStartDate: "",
+  regimeEndDate: "",
+  regimeStartTime: "",
+  regimeEndTime: "",
   location: "",
-  address: "",
-  price: "",
+  regimeAddress: "",
+  price: 0,
+  regimePricing: [],
   organizer: "",
-  category: "",
-  description: "",
+  regimeType: "",
+  regimeCountry: "nigeria",
+  regimeState: "lagos",
+  regimeCity: "Ikeja",
+  regimeDescription: "",
+  regimeAffiliate: false,
+  regimeMediaBase64: "",
+  regimeWithdrawalPin: "",
 };
-
-const categories = [
-  { id: "music", name: "Music" },
-  { id: "food", name: "Food & Drink" },
-  { id: "art", name: "Art & Culture" },
-  { id: "business", name: "Business" },
-  { id: "sports", name: "Sports & Fitness" },
-  { id: "tech", name: "Technology" },
-  { id: "other", name: "Other" },
-];
 
 export default function CreateEventPage() {
   const [formData, setFormData] = useState<EventFormData>(initialFormData);
+  const [lgs, setLgs] = useState<LGA[]>(nigerianLGAs);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [pricingCopy, setPricingCopy] = useState([
+    {
+      pricingName: "Regular",
+      pricingAmount: 0,
+      pricingTotalSeats: 50,
+      saved: false,
+    },
+  ]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const newState = formData.regimeState.replaceAll("-", " ");
+    console.log("newState: ", newState);
+
+    const newLGs = nigerianLGAs.filter(
+      (lg) => lg.state_name.toLowerCase() === newState
+    );
+    setLgs(newLGs);
+  }, [formData.regimeState]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -113,6 +164,30 @@ export default function CreateEventPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const addPricing = (
+    { pricingAmount = 0, pricingTotalSeats = 50, pricingName = "", i = 0 },
+    type: "new" | "delete" | "mod" = "new"
+  ) => {
+    setFormData((prev) => {
+      const newPricing = [...prev.regimePricing];
+
+      if (type === "new") {
+        newPricing.push({ pricingAmount, pricingName, pricingTotalSeats });
+      } else if (type === "delete") {
+        newPricing.splice(i, 1);
+      } else {
+        newPricing[i] = {
+          ...newPricing[i],
+          pricingAmount,
+          pricingName,
+          pricingTotalSeats,
+        };
+      }
+
+      return { ...prev, regimePricing: newPricing };
+    });
   };
 
   return (
@@ -232,22 +307,66 @@ export default function CreateEventPage() {
                 <input
                   type="text"
                   id="title"
-                  name="title"
-                  value={formData.title}
+                  name="regimeName"
+                  value={formData.regimeName}
                   onChange={handleChange}
                   required
                   placeholder="e.g. International Band Music Concert"
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
                 />
               </div>
+              <div>
+                <label
+                  htmlFor="category"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Category
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Tag className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <select
+                    id="category"
+                    name="regimeType"
+                    value={formData.regimeType}
+                    onChange={handleChange}
+                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC] appearance-none bg-white"
+                  >
+                    <option value="" disabled>
+                      Select a category
+                    </option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg
+                      className="w-5 h-5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 9l-7 7-7-7"
+                      ></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label
-                    htmlFor="date"
+                    htmlFor="startDate"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Date*
+                    Start Date*
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -255,9 +374,31 @@ export default function CreateEventPage() {
                     </div>
                     <input
                       type="date"
-                      id="date"
-                      name="date"
-                      value={formData.date}
+                      id="startDate"
+                      name="regimeStartDate"
+                      value={formData.regimeStartDate}
+                      onChange={handleChange}
+                      required
+                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label
+                    htmlFor="endDate"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    End Date*
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Calendar className="w-5 h-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="date"
+                      id="endDate"
+                      name="regimeEndDate"
+                      value={formData.regimeEndDate}
                       onChange={handleChange}
                       required
                       className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
@@ -279,8 +420,8 @@ export default function CreateEventPage() {
                     <input
                       type="time"
                       id="startTime"
-                      name="startTime"
-                      value={formData.startTime}
+                      name="regimeStartTime"
+                      value={formData.regimeStartTime}
                       onChange={handleChange}
                       required
                       className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
@@ -302,8 +443,8 @@ export default function CreateEventPage() {
                     <input
                       type="time"
                       id="endTime"
-                      name="endTime"
-                      value={formData.endTime}
+                      name="regimeEndTime"
+                      value={formData.regimeEndTime}
                       onChange={handleChange}
                       required
                       className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
@@ -351,94 +492,40 @@ export default function CreateEventPage() {
                 <input
                   type="text"
                   id="address"
-                  name="address"
-                  value={formData.address}
+                  name="regimeAddress"
+                  value={formData.regimeAddress}
                   onChange={handleChange}
                   required
                   placeholder="e.g. 36 Guild Street London, UK"
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Additional Details */}
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <h2 className="text-lg font-semibold mb-4">Additional Details</h2>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="price"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Ticket Price
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <DollarSign className="w-5 h-5 text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      id="price"
-                      name="price"
-                      value={formData.price}
-                      onChange={handleChange}
-                      placeholder="e.g. 120"
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="organizer"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Organizer Name
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <User className="w-5 h-5 text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      id="organizer"
-                      name="organizer"
-                      value={formData.organizer}
-                      onChange={handleChange}
-                      placeholder="e.g. Ashfak Sayem"
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
-                    />
-                  </div>
-                </div>
-              </div>
 
               <div>
                 <label
-                  htmlFor="category"
+                  htmlFor="country"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Category
+                  Country
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <Tag className="w-5 h-5 text-gray-400" />
                   </div>
                   <select
-                    id="category"
-                    name="category"
-                    value={formData.category}
+                    id="country"
+                    name="regimeCountry"
+                    value={formData.regimeCountry}
                     onChange={handleChange}
+                    disabled
                     className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC] appearance-none bg-white"
                   >
                     <option value="" disabled>
-                      Select a category
+                      Select a country
                     </option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
+                    {countries.map((country) => (
+                      <option key={country.id} value={country.id}>
+                        {country.name}
                       </option>
                     ))}
                   </select>
@@ -462,6 +549,376 @@ export default function CreateEventPage() {
 
               <div>
                 <label
+                  htmlFor="state"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  State
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Tag className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <select
+                    id="state"
+                    name="regimeState"
+                    value={formData.regimeState}
+                    onChange={handleChange}
+                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC] appearance-none bg-white"
+                  >
+                    <option value="" disabled>
+                      Select a state
+                    </option>
+                    {states.map((state) => (
+                      <option key={state.id} value={state.id}>
+                        {state.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg
+                      className="w-5 h-5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 9l-7 7-7-7"
+                      ></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="city"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  City
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Tag className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <select
+                    id="city"
+                    name="regimeCity"
+                    value={formData.regimeCity}
+                    onChange={handleChange}
+                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC] appearance-none bg-white"
+                  >
+                    <option value="" disabled>
+                      Select a city
+                    </option>
+                    {lgs.map((lg) => (
+                      <option key={lg.id} value={lg.id}>
+                        {lg.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg
+                      className="w-5 h-5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 9l-7 7-7-7"
+                      ></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing */}
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <h2 className="text-lg font-semibold mb-4">Ticket Pricing</h2>
+
+            {pricingCopy?.map((pricing, i) => {
+              if (pricingCopy[i]?.saved === true) {
+                return (
+                  <div
+                    className={`flex flex-col ${i > 0 ? "mt-4" : ""}`}
+                    key={randomNumber()}
+                  >
+                    <h3 className="text-[1.5rem] mb-4">{i + 1}.</h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label
+                            htmlFor="organizer"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                          >
+                            Pricing Name
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                              <User className="w-5 h-5 text-gray-400" />
+                            </div>
+                            <input
+                              type="text"
+                              name="pricingName"
+                              value={pricingCopy[i].pricingName}
+                              disabled
+                              placeholder="e.g. Ashfak Sayem"
+                              className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="price"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                          >
+                            Ticket Price
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                              <span className="text-[1.5rem] text-gray-400">
+                                ₦
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              name="pricingAmount"
+                              value={pricingCopy[i].pricingAmount}
+                              disabled
+                              placeholder="e.g. 120"
+                              className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="price"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                          >
+                            Total Seats
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                              <Sofa className="w-5 h-5 text-gray-400" />
+                            </div>
+                            <input
+                              type="number"
+                              name="pricingTotalSeats"
+                              value={pricingCopy[i].pricingTotalSeats}
+                              disabled
+                              placeholder="e.g. 4500"
+                              className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
+                            />
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPricingCopy(
+                              pricingCopy.filter((v, ind) => ind !== i)
+                            );
+                          }}
+                          onKeyDown={() => {
+                            setPricingCopy(
+                              pricingCopy.filter((v, ind) => ind !== i)
+                            );
+                          }}
+                          className={`w-1/4 mt-4 py-2 rounded-xl font-medium transition-all bg-[#DC2626] text-white hover:bg-[#EF4444] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+                        >
+                          <Trash2 />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              } else {
+                return (
+                  <div
+                    className={`flex flex-col ${i > 0 ? "mt-4" : ""}`}
+                    key={randomNumber()}
+                  >
+                    <h3 className="text-[1.5rem] mb-4">{i + 1}.</h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label
+                            htmlFor="organizer"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                          >
+                            Pricing Name
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                              <User className="w-5 h-5 text-gray-400" />
+                            </div>
+                            <input
+                              type="text"
+                              name="pricingName"
+                              onChange={(e) => {
+                                pricing.pricingName = e.target.value.trim();
+                              }}
+                              placeholder="e.g. Ashfak Sayem"
+                              className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="price"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                          >
+                            Ticket Price
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                              <span className="text-[1.5rem] text-gray-400">
+                                ₦
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              name="pricingAmount"
+                              onChange={(e) => {
+                                pricing.pricingAmount = Number(
+                                  e.target.value.trim()
+                                );
+                              }}
+                              placeholder="e.g. 120"
+                              className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="price"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                          >
+                            Total Seats
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                              <Sofa className="w-5 h-5 text-gray-400" />
+                            </div>
+                            <input
+                              type="number"
+                              name="pricingTotalSeats"
+                              onChange={(e) => {
+                                pricing.pricingTotalSeats = Number(
+                                  e.target.value.trim()
+                                );
+                              }}
+                              placeholder="e.g. 4500"
+                              className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex flex-row justify-between">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPricingCopy(
+                                pricingCopy.map((v, ind) => {
+                                  if (ind === i) {
+                                    return {
+                                      ...pricing,
+                                      saved: true,
+                                    };
+                                  } else {
+                                    return v;
+                                  }
+                                })
+                              );
+                            }}
+                            onKeyDown={() => {
+                              setPricingCopy(
+                                pricingCopy.map((v, ind) => {
+                                  if (ind === i) {
+                                    return {
+                                      ...pricing,
+                                      saved: true,
+                                    };
+                                  } else {
+                                    return v;
+                                  }
+                                })
+                              );
+                            }}
+                            className={`w-1/4 mt-4 py-2 rounded-xl font-medium transition-all bg-[#16A34A] text-white hover:bg-[#22C55E] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+                          >
+                            <Save />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPricingCopy(
+                                pricingCopy.filter((v, ind) => ind !== i)
+                              );
+                            }}
+                            onKeyDown={() => {
+                              setPricingCopy(
+                                pricingCopy.filter((v, ind) => ind !== i)
+                              );
+                            }}
+                            className={`w-1/4 mt-4 py-2 rounded-xl font-medium transition-all bg-[#DC2626] text-white hover:bg-[#EF4444] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+                          >
+                            <Trash2 />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+            })}
+
+            <button
+              type="button"
+              onClick={() => {
+                setPricingCopy((current) => [
+                  ...current,
+                  {
+                    saved: false,
+                    pricingTotalSeats: 50,
+                    pricingAmount: 0,
+                    pricingName: "Regular",
+                  },
+                ]);
+              }}
+              onKeyDown={() => {
+                setPricingCopy((current) => [
+                  ...current,
+                  {
+                    saved: false,
+                    pricingTotalSeats: 50,
+                    pricingAmount: 0,
+                    pricingName: "Regular",
+                  },
+                ]);
+              }}
+              className={`w-1/4 mt-4 py-4 rounded-xl font-medium transition-all bg-[#5850EC] text-white hover:bg-[#6C63FF] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+            >
+              <CirclePlus />
+            </button>
+          </div>
+
+          {/* Additional Details */}
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <h2 className="text-lg font-semibold mb-4">Additional Details</h2>
+
+            <div className="space-y-4">
+              <div>
+                <label
                   htmlFor="description"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
@@ -473,8 +930,8 @@ export default function CreateEventPage() {
                   </div>
                   <textarea
                     id="description"
-                    name="description"
-                    value={formData.description}
+                    name="regimeDescription"
+                    value={formData.regimeDescription}
                     onChange={handleChange}
                     rows={5}
                     placeholder="Describe your event..."
