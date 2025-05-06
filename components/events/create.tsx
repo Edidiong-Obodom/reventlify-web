@@ -24,6 +24,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { categories, countries, nigerianLGAs, states } from "@/lib/constants";
 import { randomNumber } from "@/lib";
+import { useSession } from "next-auth/react";
 
 interface LGA {
   id: number;
@@ -52,9 +53,8 @@ interface EventFormData {
   regimeEndDate: string;
   regimeStartTime: string;
   regimeEndTime: string;
-  location: string;
+  regimeVenue: string;
   regimeAddress: string;
-  price: number;
   regimePricing: Pricing[];
   organizer: string;
   regimeType: string;
@@ -73,9 +73,8 @@ const initialFormData: EventFormData = {
   regimeEndDate: "",
   regimeStartTime: "",
   regimeEndTime: "",
-  location: "",
+  regimeVenue: "",
   regimeAddress: "",
-  price: 0,
   regimePricing: [],
   organizer: "",
   regimeType: "",
@@ -89,11 +88,14 @@ const initialFormData: EventFormData = {
 };
 
 export default function CreateEventPage() {
+  const { data: session } = useSession();
   const [formData, setFormData] = useState<EventFormData>(initialFormData);
   const [lgs, setLgs] = useState<LGA[]>(nigerianLGAs);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [pin, setPin] = useState(["", "", "", ""]);
+  const [errorMsg, setErrorMsg] = useState("");
   const [pricingCopy, setPricingCopy] = useState([
     {
       pricingName: "Regular",
@@ -103,10 +105,15 @@ export default function CreateEventPage() {
     },
   ]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+  ];
 
   useEffect(() => {
     const newState = formData.regimeState.replaceAll("-", " ");
-    console.log("newState: ", newState);
 
     const newLGs = nigerianLGAs.filter(
       (lg) => lg.state_name.toLowerCase() === newState
@@ -144,13 +151,33 @@ export default function CreateEventPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (pricingCopy.length === 0) {
+      setErrorMsg(
+        "You cannot have 0 pricings for an event, even if it's a free event make one pricing and make the pricing amount 0 and save it."
+      );
+    }
     setIsSubmitting(true);
 
     // Simulate API call
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const request = await fetch(
+        `${process.env.NEXT_PUBLIC_URL}/v1/user/regime/create`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            authorization: `Bearer ${session?.accessToken}`,
+          },
+          body: JSON.stringify({
+            ...formData,
+            regimeMediaBase64: imagePreview,
+          }),
+        }
+      );
+      const response = await request.json();
       console.log("Form submitted:", formData);
       console.log("Image:", imagePreview);
+      console.log("response:", response);
       setIsSuccess(true);
 
       // Reset after showing success
@@ -166,28 +193,28 @@ export default function CreateEventPage() {
     }
   };
 
-  const addPricing = (
-    { pricingAmount = 0, pricingTotalSeats = 50, pricingName = "", i = 0 },
-    type: "new" | "delete" | "mod" = "new"
+  const handleInput = (index: number, value: string) => {
+    // Only allow single digit
+    if (value.length > 1) return;
+
+    const newCode = [...pin];
+    newCode[index] = value;
+    setPin(newCode);
+
+    // Auto focus next input
+    if (value !== "" && index < 4) {
+      inputRefs[index + 1].current?.focus();
+    }
+  };
+
+  const handleKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>
   ) => {
-    setFormData((prev) => {
-      const newPricing = [...prev.regimePricing];
-
-      if (type === "new") {
-        newPricing.push({ pricingAmount, pricingName, pricingTotalSeats });
-      } else if (type === "delete") {
-        newPricing.splice(i, 1);
-      } else {
-        newPricing[i] = {
-          ...newPricing[i],
-          pricingAmount,
-          pricingName,
-          pricingTotalSeats,
-        };
-      }
-
-      return { ...prev, regimePricing: newPricing };
-    });
+    // Handle backspace
+    if (e.key === "Backspace" && !pin[index] && index > 0) {
+      inputRefs[index - 1].current?.focus();
+    }
   };
 
   return (
@@ -465,16 +492,16 @@ export default function CreateEventPage() {
             <div className="space-y-4">
               <div>
                 <label
-                  htmlFor="location"
+                  htmlFor="regimeVenue"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
                   Venue Name*
                 </label>
                 <input
                   type="text"
-                  id="location"
-                  name="location"
-                  value={formData.location}
+                  id="regimeVenue"
+                  name="regimeVenue"
+                  value={formData.regimeVenue}
                   onChange={handleChange}
                   required
                   placeholder="e.g. Gala Convention Center"
@@ -614,7 +641,7 @@ export default function CreateEventPage() {
                       Select a city
                     </option>
                     {lgs.map((lg) => (
-                      <option key={lg.id} value={lg.id}>
+                      <option key={lg.id} value={lg.name}>
                         {lg.name}
                       </option>
                     ))}
@@ -910,6 +937,42 @@ export default function CreateEventPage() {
             >
               <CirclePlus />
             </button>
+          </div>
+
+          {/* Code Input */}
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <h2 className="text-lg font-semibold mb-4">Withdrawal pin</h2>
+            <div className="flex gap-4 justify-center">
+              {pin.map((digit, index) => (
+                <div
+                  key={index}
+                  className={`w-[52px] h-[52px] md:w-[72px] md:h-[72px] rounded-2xl relative
+                  ${
+                    digit
+                      ? "border-[#4263EB] border-2"
+                      : "border border-[#4263EB]"
+                  }`}
+                >
+                  <input
+                    ref={inputRefs[index]}
+                    type="number"
+                    inputMode="numeric"
+                    required
+                    pattern="[0-9]*"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleInput(index, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(index, e)}
+                    className="w-full h-full bg-transparent text-center text-2xl font-semibold focus:outline-none"
+                  />
+                  {!digit && (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                      <div className="w-4 h-0.5 bg-[#4263EB] rounded-full" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Additional Details */}

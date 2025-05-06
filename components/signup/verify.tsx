@@ -12,7 +12,9 @@ export default function VerificationScreen({
 }) {
   const [timer, setTimer] = useState(180);
   const [code, setCode] = useState(["", "", "", "", ""]);
-  const email = JSON.parse(sessionStorage.getItem("sendVMail") as string)?.email;
+  const email = JSON.parse(
+    sessionStorage.getItem("sendVMail") as string
+  )?.email;
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
@@ -35,6 +37,7 @@ export default function VerificationScreen({
           headers: {
             "content-type": "application/json",
           },
+          credentials: "include",
           body: JSON.stringify({
             email,
             code: code.join().replaceAll(",", ""),
