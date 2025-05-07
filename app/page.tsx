@@ -107,7 +107,7 @@ const Page = () => {
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
-      console.log("session:: ", session);
+      // console.log("session:: ", session);
       setIsSet(true);
 
       // if (window.innerWidth >= 768) {
