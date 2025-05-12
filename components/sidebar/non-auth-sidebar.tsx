@@ -51,7 +51,7 @@ export const NonAuthSidebar = ({
               !isMobile && !isMenuOpen ? "opacity-0" : "opacity-100"
             }`}
           >
-            Ventasy
+            Reventlify
           </h2>
         </div>
       </div>

@@ -1,0 +1,28 @@
+{
+    "name": "Reventlify",
+    "short_name": "Reventlify",
+    "description": "All-in-one event ticketing platform.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#6366F1",
+    "theme_color": "#6366F1",
+    "orientation": "portrait",
+    "icons": [
+        {
+          "src": "/img/Reventlify.png",
+          "sizes": "64x64 32x32 24x24 16x16",
+          "type": "image/png"
+        },
+        {
+          "src": "/img/Reventlify.png",
+          "type": "image/png",
+          "sizes": "192x192"
+        },
+        {
+          "src": "/img/Reventlify.png",
+          "type": "image/png",
+          "sizes": "512x512"
+        }
+    ]
+  }
+  

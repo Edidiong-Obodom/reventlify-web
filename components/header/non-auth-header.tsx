@@ -3,6 +3,7 @@
 import { Menu, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+// import Image from "next/image";
 
 interface NonAuthHeaderProps {
   isMenuOpen: boolean;
@@ -37,8 +38,17 @@ export const NonAuthHeader = ({
           </button>
 
           {/* Logo */}
-          <div className="flex items-center">
-            <span className="text-xl font-bold">Ventasy</span>
+          <div className="w-[50px] h-[50px]">
+            <span className="text-xl font-bold">Reventlify</span>
+
+            {/* <Image
+              src="/img/Reventlify.png"
+              alt="Reventlify"
+              fill
+              // width={250}
+              // height={250}
+              className="object-cover w-[50px] h-[50px]"
+            /> */}
           </div>
 
           {/* Search Bar - Center on desktop, hidden on mobile */}

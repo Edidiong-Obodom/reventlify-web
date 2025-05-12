@@ -15,7 +15,7 @@ export default async function middleware(req: NextRequest) {
   // 3. Decrypt the session from the cookie
   const session = token;
 
-  console.log("session: ", session);
+  // console.log("session: ", session);
   
 
   // 4. Redirect
