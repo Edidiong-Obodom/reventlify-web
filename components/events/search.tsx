@@ -121,7 +121,7 @@ export default function SearchPage() {
             <Link href="/" className="text-gray-800 hover:text-gray-600">
               <ArrowLeft className="w-6 h-6" />
             </Link>
-            <h1 className="text-2xl font-bold">Search</h1>
+            {/* <h1 className="text-2xl font-bold">Search</h1> */}
           </div>
         </div>
       </header>
@@ -137,7 +137,7 @@ export default function SearchPage() {
               <input
                 type="text"
                 ref={inputRef}
-                placeholder="Search..."
+                placeholder="Search Reventlify..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"

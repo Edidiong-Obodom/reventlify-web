@@ -3,7 +3,7 @@
 import { Menu, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-// import Image from "next/image";
+import Image from "next/image";
 
 interface NonAuthHeaderProps {
   isMenuOpen: boolean;
@@ -38,17 +38,29 @@ export const NonAuthHeader = ({
           </button>
 
           {/* Logo */}
-          <div className="flex items-center">
-            <span className="text-xl font-bold">Reventlify</span>
+          <div className="flex items-center md:hidden">
+            {/* <span className="text-xl font-bold">Reventlify</span> */}
 
-            {/* <Image
+            <Image
               src="/img/Reventlify.png"
               alt="Reventlify"
-              fill
-              // width={250}
-              // height={250}
-              className="object-cover w-[50px] h-[50px]"
-            /> */}
+              // fill
+              width={30}
+              height={30}
+              className="object-cover border rounded-full"
+            />
+          </div>
+          <div className="hidden md:flex items-center">
+            {/* <span className="text-xl font-bold">Reventlify</span> */}
+            <Image
+              src="/img/Reventlify.png"
+              alt="Reventlify"
+              // fill
+              width={40}
+              height={40}
+              className="object-cover border rounded-full mr-3"
+            />
+            <span className="text-xl font-bold">Reventlify</span>
           </div>
 
           {/* Search Bar - Center on desktop, hidden on mobile */}
@@ -58,7 +70,7 @@ export const NonAuthHeader = ({
               <input
                 type="text"
                 onFocus={handleFocus}
-                placeholder="Search events..."
+                placeholder="Search Reventlify..."
                 className="w-full bg-white/10 rounded-full pl-10 pr-4 py-2 text-white placeholder-white/60 focus:outline-none focus:bg-white/20 transition-colors"
               />
             </div>

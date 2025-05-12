@@ -54,7 +54,7 @@ export const Header = ({ isMenuOpen, setIsMenuOpen }: HeaderProps) => {
               <input
                 type="text"
                 onFocus={handleFocus}
-                placeholder="Search events..."
+                placeholder="Search Reventlify..."
                 className="w-full bg-white/10 rounded-full pl-10 pr-4 py-2 text-white placeholder-white/60 focus:outline-none focus:bg-white/20 transition-colors"
               />
             </div>

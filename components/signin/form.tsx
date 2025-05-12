@@ -38,7 +38,7 @@ const SigninForm = () => {
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
       {error && <p className="text-red-500 text-md text-center">{error}</p>}
-      <h2 className="text-3xl font-semibold text-gray-900">Sign in</h2>
+      <h2 className="text-2xl font-semibold text-gray-900">Sign in</h2>
 
       <div className="space-y-4">
         <div className="relative">
