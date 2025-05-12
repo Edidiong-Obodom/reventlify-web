@@ -4,8 +4,6 @@
     "description": "All-in-one event ticketing platform.",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#5850EC",
-    "theme_color": "#5850EC",
     "orientation": "portrait",
     "icons": [
         {
