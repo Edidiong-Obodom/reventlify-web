@@ -38,7 +38,7 @@ export const NonAuthHeader = ({
           </button>
 
           {/* Logo */}
-          <div className="w-[50px] h-[50px]">
+          <div className="flex items-center">
             <span className="text-xl font-bold">Reventlify</span>
 
             {/* <Image
