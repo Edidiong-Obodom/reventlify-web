@@ -29,7 +29,7 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/img/Reventlify.png" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#6366F1" />
+        <meta name="theme-color" content="#5850EC" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Reventlify" />
