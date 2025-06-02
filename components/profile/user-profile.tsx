@@ -193,8 +193,8 @@ export default function UserProfilePage() {
             <button
               type="button"
               className="flex justify-between w-full items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer"
-              onClick={() => signOut()}
-              onKeyDown={() => signOut()}
+              onClick={() => signOut({ callbackUrl: "/" })}
+              onKeyDown={() => signOut({ callbackUrl: "/" })}
             >
               <div className="font-medium">Sign out</div>
               {/* <ArrowLeft className="w-5 h-5 rotate-180" /> */}
