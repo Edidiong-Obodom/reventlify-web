@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Edit, ChevronDown, Pencil } from "lucide-react";
+import { ArrowLeft, Edit, ChevronDown, Pencil, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 interface Interest {
   id: string;
@@ -120,7 +121,11 @@ export default function UserProfilePage() {
             </div>
           </div>
 
-          <button className="flex items-center gap-2 border border-[#5850EC] text-[#5850EC] px-6 py-2 rounded-full w-full max-w-xs justify-center mb-6 hover:bg-[#5850EC]/5 transition-colors">
+          <button
+            onClick={editProfile}
+            onKeyDown={editProfile}
+            className="flex items-center gap-2 border border-[#5850EC] text-[#5850EC] px-6 py-2 rounded-full w-full max-w-xs justify-center mb-6 hover:bg-[#5850EC]/5 transition-colors"
+          >
             <Edit className="w-5 h-5" />
             <span>Edit Profile</span>
           </button>
@@ -147,7 +152,11 @@ export default function UserProfilePage() {
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-bold">Interest</h3>
-            <button className="flex items-center gap-1 text-[#5850EC] bg-[#5850EC]/10 px-4 py-1 rounded-full hover:bg-[#5850EC]/20 transition-colors">
+            <button
+              onClick={editProfile}
+              onKeyDown={editProfile}
+              className="flex items-center gap-1 text-[#5850EC] bg-[#5850EC]/10 px-4 py-1 rounded-full hover:bg-[#5850EC]/20 transition-colors"
+            >
               <Pencil className="w-4 h-4" />
               <span>CHANGE</span>
             </button>
@@ -181,10 +190,16 @@ export default function UserProfilePage() {
               <div className="font-medium">Notification Preferences</div>
               <ArrowLeft className="w-5 h-5 rotate-180" />
             </div>
-            <div className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
-              <div className="font-medium">Connected Accounts</div>
-              <ArrowLeft className="w-5 h-5 rotate-180" />
-            </div>
+            <button
+              type="button"
+              className="flex justify-between w-full items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer"
+              onClick={() => signOut()}
+              onKeyDown={() => signOut()}
+            >
+              <div className="font-medium">Sign out</div>
+              {/* <ArrowLeft className="w-5 h-5 rotate-180" /> */}
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </main>

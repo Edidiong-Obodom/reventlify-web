@@ -44,7 +44,7 @@ export default function OtherProfilePage() {
       <header className="sticky top-0 z-10 bg-white border-b">
         <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link href="/events" className="text-gray-800 hover:text-gray-600">
+            <Link href="/" className="text-gray-800 hover:text-gray-600">
               <ArrowLeft className="w-6 h-6" />
             </Link>
             <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
