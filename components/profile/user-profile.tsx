@@ -179,7 +179,7 @@ export default function UserProfilePage() {
         </div>
 
         {/* Additional Settings - Desktop Only */}
-        <div className="hidden md:block bg-white rounded-xl shadow-sm p-6 mb-8">
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
           <h3 className="text-xl font-bold mb-4">Account Settings</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
