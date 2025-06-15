@@ -3,7 +3,6 @@ import { getToken } from "next-auth/jwt";
 
 // 1. Specify protected and public routes
 const protectedRoutes = ["/dashboard", "/notifications"];
-// const excludeProtectedRoutes = ["/profile"];
 const publicRoutes = ["/login", "/signup", "/"];
 
 export default async function middleware(req: NextRequest) {
@@ -18,6 +17,22 @@ export default async function middleware(req: NextRequest) {
 
   // 3. Decrypt the session from the cookie
   const session = token;
+  let isTokenExpired = false;
+
+  if (session?.expiresAt && typeof session.expiresAt === "number") {
+    const currentDate = new Date();
+    const timestamp = Math.floor(currentDate.getTime() / 1000);
+
+    isTokenExpired = session.expiresAt < timestamp;
+  }
+
+  // 🚨 If token is expired, redirect to sign-in (optionally, you can clear cookies here)
+  if (isTokenExpired) {
+    const response = NextResponse.redirect(new URL("/signin", req.nextUrl));
+    // Optionally: clear the session cookie to force re-authentication
+    response.cookies.set("next-auth.session-token", "", { maxAge: 0 });
+    return response;
+  }
 
   // 4. Redirect
   if (

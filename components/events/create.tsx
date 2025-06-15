@@ -1,7 +1,8 @@
 "use client";
 
 import type React from "react";
-
+import toast from "react-hot-toast";
+import { spreader } from "spreader-utils";
 import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,
@@ -19,12 +20,14 @@ import {
   CirclePlus,
   Trash2,
   Save,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { categories, countries, nigerianLGAs, states } from "@/lib/constants";
-import { randomNumber } from "@/lib";
-import { useSession } from "next-auth/react";
+import { getRomanNumeral, randomNumber } from "@/lib";
+import { signOut, useSession } from "next-auth/react";
 
 interface LGA {
   id: number;
@@ -64,6 +67,10 @@ interface EventFormData {
   regimeDescription: string;
   regimeAffiliate: boolean;
   regimeMediaBase64: string;
+  regimeMediaBase64I?: string;
+  regimeMediaBase64II?: string;
+  regimeMediaBase64III?: string;
+  regimeMediaBase64IV?: string;
   regimeWithdrawalPin: string;
 }
 
@@ -84,6 +91,10 @@ const initialFormData: EventFormData = {
   regimeDescription: "",
   regimeAffiliate: false,
   regimeMediaBase64: "",
+  regimeMediaBase64I: "",
+  regimeMediaBase64II: "",
+  regimeMediaBase64III: "",
+  regimeMediaBase64IV: "",
   regimeWithdrawalPin: "",
 };
 
@@ -95,7 +106,7 @@ export default function CreateEventPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [pin, setPin] = useState(["", "", "", ""]);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [hideGallery, setHideGallery] = useState<boolean>(false);
   const [pricingCopy, setPricingCopy] = useState([
     {
       pricingName: "Regular",
@@ -105,6 +116,12 @@ export default function CreateEventPage() {
     },
   ]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+  ];
   const inputRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -130,21 +147,52 @@ export default function CreateEventPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const toggleGallery = () => {
+    if (hideGallery) {
+      setHideGallery(false);
+    } else {
+      setHideGallery(true);
+    }
+  };
+
+  const handleImageChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setAction: (value: any) => void,
+    numeral?: number
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Create a preview URL for the selected image
     const reader = new FileReader();
     reader.onloadend = () => {
-      setImagePreview(reader.result as string);
+      if (numeral) {
+        setAction((prev: any) => ({
+          ...prev,
+          [`regimeMediaBase64${getRomanNumeral(numeral)}`]:
+            reader.result as string,
+        }));
+      } else {
+        setAction(reader.result as string);
+      }
     };
     reader.readAsDataURL(file);
   };
 
-  const removeImage = () => {
-    setImagePreview(null);
-    if (fileInputRef.current) {
+  const removeImage = (
+    inputRef: React.RefObject<HTMLInputElement | null>,
+    setAction: (value: any) => void,
+    numeral?: number
+  ) => {
+    if (numeral) {
+      setAction((prev: any) => ({
+        ...prev,
+        [`regimeMediaBase64${getRomanNumeral(numeral)}`]: null,
+      }));
+    } else {
+      setAction(null);
+    }
+    if (fileInputRef?.current) {
       fileInputRef.current.value = "";
     }
   };
@@ -152,11 +200,41 @@ export default function CreateEventPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pricingCopy.length === 0) {
-      setErrorMsg(
-        "You cannot have 0 pricings for an event, even if it's a free event make one pricing and make the pricing amount 0 and save it."
+      return toast.error(
+        "You must have a pricing for an event, even if it's a free event make one pricing and make the pricing amount 0 and save it."
       );
     }
+    if (!imagePreview) {
+      return toast.error("You must have an event banner.");
+    }
+
+    const newFormData: EventFormData = {
+      ...formData,
+      regimePricing: pricingCopy,
+      regimeWithdrawalPin: pin.join(""),
+      regimeMediaBase64: imagePreview,
+      regimeStartTime: `${formData.regimeStartTime}:00`,
+      regimeEndTime: `${formData.regimeEndTime}:00`,
+    };
     setIsSubmitting(true);
+    const valueCheck = spreader(
+      [...Object.keys(newFormData)],
+      [...Object.values(newFormData)]
+    );
+
+    if (
+      valueCheck.value.length <= 15 ||
+      (valueCheck.value.length <= 16 &&
+        valueCheck?.objectify?.regimeMediaBase64I) ||
+      valueCheck?.objectify?.regimeMediaBase64II ||
+      valueCheck?.objectify?.regimeMediaBase64III ||
+      valueCheck?.objectify?.regimeMediaBase64IV
+    ) {
+      return toast.error(
+        "Every section is compulsory to fill, except the event gallery",
+        { duration: 8000 }
+      );
+    }
 
     // Simulate API call
     try {
@@ -168,24 +246,15 @@ export default function CreateEventPage() {
             "Content-Type": "application/json",
             authorization: `Bearer ${session?.accessToken}`,
           },
-          body: JSON.stringify({
-            ...formData,
-            regimeMediaBase64: imagePreview,
-          }),
+          body: JSON.stringify(newFormData),
         }
       );
       const response = await request.json();
-      console.log("Form submitted:", formData);
-      console.log("Image:", imagePreview);
-      console.log("response:", response);
-      setIsSuccess(true);
-
-      // Reset after showing success
-      setTimeout(() => {
-        setIsSuccess(false);
-        setFormData(initialFormData);
-        setImagePreview(null);
-      }, 3000);
+      if (request.status === 401 || request.status === 403) {
+        signOut({ callbackUrl: "/signin" });
+      } else if (request.status !== 200) {
+        return toast.error(response?.message);
+      }
     } catch (error) {
       console.error("Error submitting form:", error);
     } finally {
@@ -203,7 +272,7 @@ export default function CreateEventPage() {
 
     // Auto focus next input
     if (value !== "" && index < 4) {
-      inputRefs[index + 1].current?.focus();
+      inputRefs[index + 1]?.current?.focus();
     }
   };
 
@@ -230,33 +299,42 @@ export default function CreateEventPage() {
               <ArrowLeft className="w-5 h-5" />
               <span className="font-medium">Back</span>
             </Link>
-            <h1 className="text-xl md:text-2xl font-bold">Create New Event</h1>
+            {/* <h1 className="text-xl md:text-2xl font-bold">Create New Event</h1> */}
           </div>
 
-          <button
-            type="submit"
-            form="event-form"
-            disabled={isSubmitting || isSuccess}
-            className={`px-6 py-2 rounded-lg font-medium transition-all ${
-              isSuccess
-                ? "bg-green-500 text-white"
-                : "bg-[#5850EC] text-white hover:bg-[#6C63FF]"
-            } disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2`}
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Creating...</span>
-              </>
-            ) : isSuccess ? (
-              <>
-                <Check className="w-4 h-4" />
-                <span>Created!</span>
-              </>
-            ) : (
-              <span>Create Event</span>
-            )}
-          </button>
+          {session ? (
+            <button
+              type="submit"
+              form="event-form"
+              disabled={isSubmitting || isSuccess}
+              className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                isSuccess
+                  ? "bg-green-500 text-white"
+                  : "bg-[#5850EC] text-white hover:bg-[#6C63FF]"
+              } disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2`}
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Creating...</span>
+                </>
+              ) : isSuccess ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Created!</span>
+                </>
+              ) : (
+                <span>Create Event</span>
+              )}
+            </button>
+          ) : (
+            <Link
+              className="px-6 py-2 rounded-lg font-medium bg-[#5850EC] text-white hover:bg-[#6C63FF] flex items-center gap-2"
+              href={"/signin"}
+            >
+              Signin
+            </Link>
+          )}
         </div>
       </header>
 
@@ -267,7 +345,7 @@ export default function CreateEventPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <ImageIcon className="w-5 h-5 text-[#5850EC]" />
-              Event Image
+              Event Banner<span className="text-red-500">*</span>
             </h2>
 
             <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center">
@@ -283,7 +361,7 @@ export default function CreateEventPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={removeImage}
+                    onClick={() => removeImage(fileInputRef, setImagePreview)}
                     className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
                   >
                     <X className="w-4 h-4" />
@@ -304,7 +382,7 @@ export default function CreateEventPage() {
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    onChange={handleImageChange}
+                    onChange={(e) => handleImageChange(e, setImagePreview)}
                     className="hidden"
                     id="event-image"
                   />
@@ -317,6 +395,93 @@ export default function CreateEventPage() {
                 </>
               )}
             </div>
+            <button
+              className="text-lg font-semibold mb-4 flex items-center gap-2 mt-12"
+              type="button"
+              onKeyDown={toggleGallery}
+              onClick={toggleGallery}
+            >
+              <ImageIcon className="w-5 h-5 text-[#5850EC]" />
+              Event Gallery
+              {hideGallery ? (
+                <ChevronDown className="w-5 h-5 text-[#5850EC]" />
+              ) : (
+                <ChevronUp className="w-5 h-5 text-[#5850EC]" />
+              )}
+            </button>
+
+            {/* optional images */}
+            {!hideGallery ? (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                {[1, 2, 3, 4].map((i, index) => {
+                  const varName = `regimeMediaBase64${getRomanNumeral(i)}`;
+                  const firstForm: any = formData;
+                  const theFormData: any = firstForm[varName];
+                  return (
+                    <div
+                      key={i}
+                      className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col text-center items-center justify-center"
+                    >
+                      {theFormData ? (
+                        <div className="relative w-full">
+                          <div className="aspect-video w-full relative rounded-lg overflow-hidden">
+                            <Image
+                              src={theFormData ?? "/placeholder.svg"}
+                              alt="Event preview"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeImage(
+                                bannerInputRefs[index],
+                                setFormData,
+                                i
+                              )
+                            }
+                            className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-16 h-16 bg-[#5850EC]/10 rounded-full flex items-center justify-center mb-4">
+                            <Upload className="w-8 h-8 text-[#5850EC]" />
+                          </div>
+                          <p className="text-gray-600 mb-2">
+                            Drag and drop an image or click to browse
+                          </p>
+                          <p className="text-gray-400 text-sm mb-4">
+                            Recommended size: 1200 x 630 pixels
+                          </p>
+                          <input
+                            ref={bannerInputRefs[index]}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) =>
+                              handleImageChange(e, setFormData, i)
+                            }
+                            className="hidden"
+                            id={varName}
+                          />
+                          <label
+                            htmlFor={varName}
+                            className="px-4 py-2 bg-[#5850EC]/10 text-[#5850EC] rounded-lg cursor-pointer hover:bg-[#5850EC]/20 transition-colors"
+                          >
+                            Select Image
+                          </label>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              ""
+            )}
           </div>
 
           {/* Basic Information */}
@@ -329,7 +494,7 @@ export default function CreateEventPage() {
                   htmlFor="title"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Event Title*
+                  Event Title<span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -347,7 +512,7 @@ export default function CreateEventPage() {
                   htmlFor="category"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Category
+                  Category<span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -393,7 +558,7 @@ export default function CreateEventPage() {
                     htmlFor="startDate"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Start Date*
+                    Start Date<span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -415,7 +580,7 @@ export default function CreateEventPage() {
                     htmlFor="endDate"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    End Date*
+                    End Date<span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -438,7 +603,7 @@ export default function CreateEventPage() {
                     htmlFor="startTime"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Start Time*
+                    Start Time<span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -461,7 +626,7 @@ export default function CreateEventPage() {
                     htmlFor="endTime"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    End Time*
+                    End Time<span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -495,7 +660,7 @@ export default function CreateEventPage() {
                   htmlFor="regimeVenue"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Venue Name*
+                  Venue Name<span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -514,7 +679,7 @@ export default function CreateEventPage() {
                   htmlFor="address"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Address*
+                  Address<span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -624,7 +789,7 @@ export default function CreateEventPage() {
                   htmlFor="city"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  City
+                  City<span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -781,7 +946,7 @@ export default function CreateEventPage() {
                             htmlFor="organizer"
                             className="block text-sm font-medium text-gray-700 mb-1"
                           >
-                            Pricing Name
+                            Pricing Name<span className="text-red-500">*</span>
                           </label>
                           <div className="relative">
                             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -804,7 +969,7 @@ export default function CreateEventPage() {
                             htmlFor="price"
                             className="block text-sm font-medium text-gray-700 mb-1"
                           >
-                            Ticket Price
+                            Ticket Price<span className="text-red-500">*</span>
                           </label>
                           <div className="relative">
                             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -831,7 +996,7 @@ export default function CreateEventPage() {
                             htmlFor="price"
                             className="block text-sm font-medium text-gray-700 mb-1"
                           >
-                            Total Seats
+                            Total Seats<span className="text-red-500">*</span>
                           </label>
                           <div className="relative">
                             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -941,7 +1106,9 @@ export default function CreateEventPage() {
 
           {/* Code Input */}
           <div className="bg-white p-6 rounded-xl shadow-sm">
-            <h2 className="text-lg font-semibold mb-4">Withdrawal pin</h2>
+            <h2 className="text-lg font-semibold mb-4">
+              Withdrawal pin<span className="text-red-500">*</span>
+            </h2>
             <div className="flex gap-4 justify-center">
               {pin.map((digit, index) => (
                 <div
@@ -985,7 +1152,7 @@ export default function CreateEventPage() {
                   htmlFor="description"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Description
+                  Description<span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute top-3 left-3 pointer-events-none">
@@ -997,6 +1164,7 @@ export default function CreateEventPage() {
                     value={formData.regimeDescription}
                     onChange={handleChange}
                     rows={5}
+                    required
                     placeholder="Describe your event..."
                     className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
                   ></textarea>

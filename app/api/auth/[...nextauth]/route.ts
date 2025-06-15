@@ -45,6 +45,7 @@ const authOptions: NextAuthOptions = {
             lastName: user.user.lastName,
             email: user.user.email,
             token: user.user.token, // Ensure this exists in the API response
+            expiresAt: user.expiresAt,
           };
         }
 
@@ -55,17 +56,12 @@ const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // token.user = {
-        //   id: user.id,
-        //   email:  user.email,
-        //   firstName: user.firstName,
-        //   lastName: user.lastName,
-        // }
         token.id = user.id;
         token.email = user.email;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
         token.accessToken = user.token; // Ensure token exists
+        token.expiresAt = (user as any)?.expiresAt;
       }
       return token;
     },
@@ -77,6 +73,7 @@ const authOptions: NextAuthOptions = {
         lastName: token.lastName as string,
       };
       (session as any).accessToken = token.accessToken;
+      (session as any).expiresAt = token.expiresAt;
       return session;
     },
   },

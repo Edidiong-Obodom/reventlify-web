@@ -78,7 +78,7 @@ export const NonAuthHeader = ({
 
           {/* Navigation Links - Desktop */}
           <div className="hidden md:flex items-center gap-6">
-            <Link href="#" className="hover:text-white/80 transition-colors">
+            <Link href="/events/create" className="hover:text-white/80 transition-colors">
               Create Events
             </Link>
             <Link href="#" className="hover:text-white/80 transition-colors">

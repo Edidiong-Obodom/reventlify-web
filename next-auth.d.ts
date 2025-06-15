@@ -9,6 +9,7 @@ declare module "next-auth" {
       lastName: string;
     };
     accessToken: string;
+    expiresAt: number;
   }
 
   interface User {
@@ -25,5 +26,6 @@ declare module "next-auth" {
     firstName: string;
     lastName: string;
     accessToken: string;
+    expiresAt: number;
   }
 }
