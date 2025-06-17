@@ -1,17 +1,19 @@
 import ngLGAs from "./lgas.json";
 
 export const categories = [
+  { id: "carnival", name: "Carnival" },
   { id: "concert", name: "Concert" },
   { id: "conference", name: "Conference" },
-  { id: "theatre", name: "Theatre" },
-  { id: "pageantry", name: "Pageantry" },
-  { id: "service", name: "Service" },
   { id: "education", name: "Education" },
-  { id: "carnival", name: "Carnival" },
+  { id: "exhibition", name: "Exhibition" },
+  { id: "fashion", name: "Fashion" },
   { id: "festival", name: "Festival" },
+  { id: "pageantry", name: "Pageantry" },
   { id: "party", name: "Party" },
+  { id: "service", name: "Service" },
   { id: "sport", name: "Sport" },
   { id: "talent-show", name: "Talent Show" },
+  { id: "theatre", name: "Theatre" },
 ];
 
 export const nigerianLGAs = ngLGAs;
