@@ -34,6 +34,32 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Reventlify" />
         <link rel="apple-touch-icon" href="/img/Reventlify.png" />
+
+        {/* Open Graph Meta Tags */}
+        <meta property="og:title" content="Reventlify" />
+        <meta
+          property="og:description"
+          content="Reventlify is your ultimate all-in-one event ticketing platform. Create, manage, and sell tickets effortlessly with powerful features like affiliate programs, secure payments, ticket transfers, and personalized attendee experiences."
+        />
+        <meta
+          property="og:image"
+          content="https://reventlify.com/img/Reventlify.png"
+        />
+        <meta property="og:url" content="https://reventlify.com/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Reventlify" />
+
+        {/* Twitter Card Meta Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Reventlify" />
+        <meta
+          name="twitter:description"
+          content="Reventlify is your ultimate all-in-one event ticketing platform."
+        />
+        <meta
+          name="twitter:image"
+          content="https://reventlify.com/img/Reventlify.png"
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

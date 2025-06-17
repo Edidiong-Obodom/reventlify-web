@@ -1,13 +1,10 @@
-import { ChevronRight } from "lucide-react"
-import { CategoryCard } from "./category-card"
+import { ChevronRight } from "lucide-react";
+import { CategoryCard } from "./category-card";
+import React from "react";
+import { Category } from "@/lib/interfaces/regimeInterface";
 
 interface CategoriesSectionProps {
-  categories: Array<{
-    id: number
-    name: string
-    icon: string
-    color: string
-  }>
+  categories: Category[];
 }
 
 export const CategoriesSection = ({ categories }: CategoriesSectionProps) => {
@@ -25,6 +22,5 @@ export const CategoriesSection = ({ categories }: CategoriesSectionProps) => {
         ))}
       </div>
     </div>
-  )
-}
-
+  );
+};

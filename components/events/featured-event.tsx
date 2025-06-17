@@ -1,25 +1,32 @@
-import { Users, Heart, Share2 } from "lucide-react"
-import ImageFallback from "../image-fallback"
+import { Users, Heart, Share2 } from "lucide-react";
+import ImageFallback from "../image-fallback";
+import { Regime } from "@/lib/interfaces/regimeInterface";
+import moment from "moment";
 
-interface FeaturedEventProps {
-  event: {
-    title: string
-    image: string
-    date: string
-    location: string
-    attendees: number
-    description: string
-  }
-}
+export const FeaturedEvent = ({ event }: { event: Partial<Regime> }) => {
+  const handleDate = (start_date: string, end_date: string) => {
+    if (start_date !== end_date) {
+      return `${start_date?.trim().split("-")[2].slice(0, 2)}-${end_date
+        ?.trim()
+        .split("-")[2]
+        .slice(0, 2)} ${moment()
+        .month(Number(start_date?.split("-")[1]) - 1)
+        .format("MMMM")
+        .toUpperCase()}`;
+    }
+    return `${start_date?.trim().split("-")[2].slice(0, 2)} ${moment()
+      .month(Number(start_date?.split("-")[1]) - 1)
+      .format("MMMM")
+      .toUpperCase()}`;
+  };
 
-export const FeaturedEvent = ({ event }: FeaturedEventProps) => {
   return (
     <div className="mb-12 rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-lg transition-shadow">
       <div className="relative h-[400px] md:h-[500px] group">
         <ImageFallback
-          src={event.image || "/placeholder.svg"}
-          fallbackSrc="/placeholder.svg?height=500&width=1000"
-          alt={event.title}
+          src={event.regime_banner as string}
+          fallbackSrc="/placeholder.jpg"
+          alt={event.name as string}
           fill
           className="object-cover transition-transform duration-700 group-hover:scale-105"
         />
@@ -27,14 +34,19 @@ export const FeaturedEvent = ({ event }: FeaturedEventProps) => {
         <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
           <div className="flex items-center gap-4 mb-4">
             <div className="bg-white/20 backdrop-blur px-4 py-2 rounded-lg">
-              <span className="font-bold">{event.date}</span>
+              <span className="font-bold">
+                {handleDate(
+                  event.start_date as string,
+                  event.end_date as string
+                )}
+              </span>
             </div>
             <div className="bg-white/20 backdrop-blur px-4 py-2 rounded-lg flex items-center gap-2">
               <Users className="w-4 h-4" />
-              <span>{event.attendees}+ Going</span>
+              <span>{event.total_ticket_sales}+ Going</span>
             </div>
           </div>
-          <h1 className="text-4xl font-bold mb-2">{event.title}</h1>
+          <h1 className="text-4xl font-bold mb-2">{event.name}</h1>
           <p className="text-white/80 mb-4 max-w-2xl">{event.description}</p>
           <div className="flex items-center gap-4">
             <button className="bg-[#5850EC] px-6 py-3 rounded-xl font-medium hover:bg-[#6C63FF] transition-colors">
@@ -50,6 +62,5 @@ export const FeaturedEvent = ({ event }: FeaturedEventProps) => {
         </div>
       </div>
     </div>
-  )
-}
-
+  );
+};
