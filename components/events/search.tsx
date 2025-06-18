@@ -10,6 +10,11 @@ import {
   MapPin,
 } from "lucide-react";
 import Image from "next/image";
+import { useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
+import { getRegimes } from "@/lib/api/getRegimes";
+import { EventCard, EventCardSkeleton } from "./event-card";
+import { categories } from "@/lib/constants";
 
 interface Event {
   id: string;
@@ -80,19 +85,13 @@ const events: Event[] = [
   },
 ];
 
-const categories = [
-  "All",
-  "Music",
-  "Business",
-  "Food",
-  "Art",
-  "Sports",
-  "Technology",
-  "Family",
-  "Lifestyle",
-];
-
 export default function SearchPage() {
+  const { data: session } = useSession();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["regimes", session?.accessToken],
+    queryFn: () => getRegimes(session?.accessToken as string, 1, 6),
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -103,12 +102,12 @@ export default function SearchPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  const filteredEvents = events.filter((event) => {
-    const matchesSearch = event.title
+  const filteredEvents = data?.data.filter((event) => {
+    const matchesSearch = event?.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchesCategory =
-      selectedCategory === "All" || event.category === selectedCategory;
+      selectedCategory === "All" || event.type === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -117,19 +116,15 @@ export default function SearchPage() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b">
         <div className="max-w-5xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-gray-800 hover:text-gray-600">
-              <ArrowLeft className="w-6 h-6" />
-            </Link>
-            {/* <h1 className="text-2xl font-bold">Search</h1> */}
-          </div>
-        </div>
-      </header>
-
-      {/* Search and Filters */}
-      <div className="sticky top-[65px] z-10 bg-white border-b">
-        <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="flex items-center gap-3">
+            <div className="max-w-5xl mx-auto px-4 py-4">
+              <div className="flex items-center gap-4">
+                <Link href="/" className="text-gray-800 hover:text-gray-600">
+                  <ArrowLeft className="w-6 h-6" />
+                </Link>
+                {/* <h1 className="text-2xl font-bold">Search</h1> */}
+              </div>
+            </div>
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                 <Search className="w-5 h-5 text-[#5850EC]" />
@@ -162,26 +157,38 @@ export default function SearchPage() {
               <div className="flex gap-2 pb-2">
                 {categories.map((category) => (
                   <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
+                    key={category.id}
+                    onClick={() =>
+                      selectedCategory === category.id
+                        ? setSelectedCategory("All")
+                        : setSelectedCategory(category.id)
+                    }
                     className={`px-4 py-2 rounded-full whitespace-nowrap ${
-                      selectedCategory === category
+                      selectedCategory === category.id
                         ? "bg-[#5850EC] text-white"
                         : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
                   >
-                    {category}
+                    {category.name}
                   </button>
                 ))}
               </div>
             </div>
           )}
         </div>
-      </div>
+      </header>
+
+      {/* Search and Filters */}
 
       {/* Results */}
       <main className="max-w-5xl mx-auto px-4 py-6">
-        {filteredEvents.length === 0 ? (
+        {isLoading ? (
+          <div className="space-y-4 md:grid md:grid-cols-2 md:gap-6 md:space-y-0 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <EventCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : data?.data.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="w-20 h-20 bg-[#5850EC]/10 rounded-full flex items-center justify-center mb-4">
               <Search className="w-10 h-10 text-[#5850EC]" />
@@ -194,50 +201,9 @@ export default function SearchPage() {
           </div>
         ) : (
           <div className="space-y-4 md:grid md:grid-cols-2 md:gap-6 md:space-y-0 lg:grid-cols-3">
-            {filteredEvents.map((event) => (
+            {filteredEvents?.map((event) => (
               <Link href={`/events/view/${event.id}`} key={event.id}>
-                <div className="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-shadow md:h-full flex flex-col">
-                  <div className="flex p-4 gap-4 md:flex-col md:items-start">
-                    <div className="w-20 h-20 md:w-full md:h-40 rounded-lg overflow-hidden bg-[#5850EC]/10 relative flex-shrink-0">
-                      <Image
-                        src={event.image || "/placeholder.svg"}
-                        alt={event.title}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[#5850EC] font-medium text-sm mb-1">
-                        {event.date}- {event.day} -{event.time}
-                      </div>
-                      <h2 className="text-lg font-semibold mb-2 line-clamp-2">
-                        {event.title}
-                      </h2>
-
-                      <div className="hidden md:flex flex-col gap-2 mt-4">
-                        <div className="flex items-center text-gray-500 text-sm">
-                          <Calendar className="w-4 h-4 mr-2" />
-                          <span>
-                            {event.date}, {event.time}
-                          </span>
-                        </div>
-                        {event.location && (
-                          <div className="flex items-center text-gray-500 text-sm">
-                            <MapPin className="w-4 h-4 mr-2" />
-                            <span>{event.location}</span>
-                          </div>
-                        )}
-                        {event.category && (
-                          <div className="flex items-center text-gray-500 text-sm">
-                            <span className="px-2 py-1 bg-gray-100 rounded-full text-xs">
-                              {event.category}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <EventCard event={event} coverLink={true} />
               </Link>
             ))}
           </div>

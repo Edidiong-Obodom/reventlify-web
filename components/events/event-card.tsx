@@ -3,8 +3,15 @@ import ImageFallback from "../image-fallback";
 import Link from "next/link";
 import moment from "moment";
 import { Regime } from "@/lib/interfaces/regimeInterface";
+import { capitalizeEachWord, capitalizeFirst } from "@/lib";
 
-export const EventCard = ({ event }: { event: Partial<Regime> }) => {
+export const EventCard = ({
+  event,
+  coverLink,
+}: {
+  event: Partial<Regime>;
+  coverLink?: boolean;
+}) => {
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all hover:-translate-y-0.5">
       <div className="relative h-48 group">
@@ -42,12 +49,17 @@ export const EventCard = ({ event }: { event: Partial<Regime> }) => {
               ?.amount.toLocaleString() ?? "free"}
           </span>
         </div>
-        <Link
-          href="/events/view/2"
-          className="font-bold text-lg mb-2 hover:text-[#5850EC] cursor-pointer transition-colors"
-        >
-          {event.name}
-        </Link>
+        {coverLink ? (
+          event.name
+        ) : (
+          <Link
+            href="/events/view/2"
+            className="font-bold text-lg mb-2 hover:text-[#5850EC] cursor-pointer transition-colors"
+          >
+            {event.name}
+          </Link>
+        )}
+
         <div className="flex items-center gap-2 mb-3">
           <div className="flex -space-x-2">
             {[1, 2, 3].map((i) => (
@@ -72,7 +84,16 @@ export const EventCard = ({ event }: { event: Partial<Regime> }) => {
         </div>
         <div className="flex items-center text-gray-500">
           <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
-          <span className="text-sm truncate">{`${event.address} ${event.city} ${event.state} ${event.country}`}</span>
+          <span className="text-sm truncate">{`${capitalizeFirst(
+            event.address as string
+          )}, ${capitalizeEachWord(event.city as string)} ${capitalizeFirst(
+            event.state as string
+          )}, ${capitalizeFirst(event.country as string)}.`}</span>
+        </div>
+        <div className="flex items-center text-gray-500 mt-3 text-sm">
+          <span className="px-2 py-1 bg-gray-100 rounded-full text-xs">
+            {event.type}
+          </span>
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import { getPopularRegimes } from "@/lib/api/getRegimes";
 import Link from "next/link";
+import { FeaturedEventSkeleton } from "./featured-event-skeleton";
 
 export const FeaturedCarousel = () => {
   const { data: session } = useSession();
@@ -26,22 +27,30 @@ export const FeaturedCarousel = () => {
     }
   }, [data]);
 
-//   const goToPrevious = () => {
-//     if (Array.isArray(data?.data) && data.data.length > 0) {
-//       setCurrentIndex(
-//         (prevIndex) => (prevIndex - 1 + data.data.length) % data.data.length
-//       );
-//     }
-//   };
+  //   const goToPrevious = () => {
+  //     if (Array.isArray(data?.data) && data.data.length > 0) {
+  //       setCurrentIndex(
+  //         (prevIndex) => (prevIndex - 1 + data.data.length) % data.data.length
+  //       );
+  //     }
+  //   };
 
-//   const goToNext = () => {
-//     if (Array.isArray(data?.data) && data.data.length > 0) {
-//       setCurrentIndex((prevIndex) => (prevIndex + 1) % data.data.length);
-//     }
-//   };
+  //   const goToNext = () => {
+  //     if (Array.isArray(data?.data) && data.data.length > 0) {
+  //       setCurrentIndex((prevIndex) => (prevIndex + 1) % data.data.length);
+  //     }
+  //   };
 
   if (isLoading) {
-    return "";
+    return (
+      <div className="relative w-full max-w-7xl mx-auto overflow-hidden rounded-2xl">
+        <div className="flex rounded-2xl transition-transform duration-700">
+          <div className="w-full px-2">
+            <FeaturedEventSkeleton />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Empty state placeholder
