@@ -78,19 +78,25 @@ export const NonAuthHeader = ({
 
           {/* Navigation Links - Desktop */}
           <div className="hidden md:flex items-center gap-6">
-            <Link href="/events/create" className="hover:text-white/80 transition-colors">
+            <Link
+              rel="canonical"
+              href="/events/create"
+              className="hover:text-white/80 transition-colors"
+            >
               Create Events
             </Link>
             <Link href="#" className="hover:text-white/80 transition-colors">
               Help Center
             </Link>
             <Link
+              rel="canonical"
               href="/signin"
               className="hover:text-white/80 transition-colors"
             >
               Log In
             </Link>
             <Link
+              rel="canonical"
               href="/signup"
               className="bg-white text-[#5850EC] px-4 py-2 rounded-lg font-medium hover:bg-white/90 transition-colors"
             >

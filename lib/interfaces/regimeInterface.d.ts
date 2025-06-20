@@ -1,3 +1,18 @@
+export type RegimeType =
+  | "concert"
+  | "conference"
+  | "theatre"
+  | "pageantry"
+  | "service"
+  | "education"
+  | "carnival"
+  | "festival"
+  | "party"
+  | "sport"
+  | "talent-show"
+  | "exhibition"
+  | "fashion";
+
 export interface Pricing {
   id: string;
   name: string;
@@ -28,6 +43,13 @@ export interface Regime {
   total_ticket_sales: string;
   total_revenue: string;
   pricings: Pricing[];
+}
+
+export interface SearchRegimes {
+  searchString: string;
+  type?: RegimeType;
+  page: number;
+  limit: number;
 }
 
 export interface GetRegimes {

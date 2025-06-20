@@ -4,6 +4,7 @@ import Link from "next/link";
 import moment from "moment";
 import { Regime } from "@/lib/interfaces/regimeInterface";
 import { capitalizeEachWord, capitalizeFirst } from "@/lib";
+import { slugify } from "@/lib/helpers/formatEventDetail";
 
 export const EventCard = ({
   event,
@@ -53,7 +54,8 @@ export const EventCard = ({
           event.name
         ) : (
           <Link
-            href="/events/view/2"
+            rel="canonical"
+            href={`/events/view/${slugify(event.name as string)}`}
             className="font-bold text-lg mb-2 hover:text-[#5850EC] cursor-pointer transition-colors"
           >
             {event.name}

@@ -399,6 +399,7 @@ export default function CreateEventPage() {
               </button>
             ) : (
               <Link
+                rel="canonical"
                 className="px-6 py-2 rounded-lg font-medium bg-[#5850EC] text-white hover:bg-[#6C63FF] flex items-center gap-2"
                 href={"/signin"}
               >

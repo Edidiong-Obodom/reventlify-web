@@ -1,114 +1,106 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Search,
-  SlidersHorizontal,
-  Calendar,
-  MapPin,
-} from "lucide-react";
-import Image from "next/image";
+import { ArrowLeft, Search, SlidersHorizontal } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useQuery } from "@tanstack/react-query";
-import { getRegimes } from "@/lib/api/getRegimes";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { getRegimes, searchForRegimes } from "@/lib/api/getRegimes";
 import { EventCard, EventCardSkeleton } from "./event-card";
 import { categories } from "@/lib/constants";
-
-interface Event {
-  id: string;
-  title: string;
-  date: string;
-  day: string;
-  time: string;
-  image: string;
-  location?: string;
-  category?: string;
-}
-
-const events: Event[] = [
-  {
-    id: "1",
-    title: "A virtual evening of smooth jazz",
-    date: "1ST MAY",
-    day: "SAT",
-    time: "2:00 PM",
-    image:
-      "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    location: "Online Event",
-    category: "Music",
-  },
-  {
-    id: "2",
-    title: "Jo malone london's mother's day",
-    date: "1ST MAY",
-    day: "SAT",
-    time: "2:00 PM",
-    image:
-      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    location: "London, UK",
-    category: "Lifestyle",
-  },
-  {
-    id: "3",
-    title: "Women's leadership conference",
-    date: "1ST MAY",
-    day: "SAT",
-    time: "2:00 PM",
-    image:
-      "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    location: "New York, USA",
-    category: "Business",
-  },
-  {
-    id: "4",
-    title: "International kids safe parents night out",
-    date: "1ST MAY",
-    day: "SAT",
-    time: "2:00 PM",
-    image:
-      "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    location: "Chicago, USA",
-    category: "Family",
-  },
-  {
-    id: "5",
-    title: "International gala music festival",
-    date: "1ST MAY",
-    day: "SAT",
-    time: "2:00 PM",
-    image:
-      "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    location: "Paris, France",
-    category: "Music",
-  },
-];
+import { useDebounce } from "@/hooks/useDebounce";
+import { slugify } from "@/lib/helpers/formatEventDetail";
 
 export default function SearchPage() {
   const { data: session } = useSession();
-
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["regimes", session?.accessToken],
-    queryFn: () => getRegimes(session?.accessToken as string, 1, 6),
-  });
-  const [searchTerm, setSearchTerm] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    // Focus the input when the component mounts
-    inputRef.current?.focus();
-  }, []);
+  const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const limit = 10;
 
-  const filteredEvents = data?.data.filter((event) => {
-    const matchesSearch = event?.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    error,
+  } = useInfiniteQuery({
+    queryKey: [
+      "regimes",
+      session?.accessToken,
+      debouncedSearch,
+      selectedCategory,
+    ],
+    queryFn: async ({ pageParam = 1 }) => {
+      if (debouncedSearch.trim() !== "") {
+        return searchForRegimes({
+          searchString: debouncedSearch,
+          type:
+            selectedCategory === "All" ? undefined : (selectedCategory as any),
+          page: pageParam,
+          limit,
+        });
+      } else {
+        return getRegimes(session?.accessToken as string, pageParam, limit);
+      }
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      // If the number of items returned is less than the limit, we've reached the end
+      if (lastPage?.data.length < limit) return undefined;
+      return allPages.length + 1; // Next page number
+    },
+    initialPageParam: 1,
+    // enabled: !!session?.accessToken,
+  });
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >=
+          document.body.offsetHeight - 500 &&
+        hasNextPage &&
+        !isFetchingNextPage
+      ) {
+        fetchNextPage();
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // New: Auto-fetch if page is not tall enough
+  useEffect(() => {
+    const checkPageHeight = () => {
+      if (
+        window.innerHeight >= document.body.offsetHeight - 500 && // If the page doesn't fill the screen + threshold
+        hasNextPage &&
+        !isFetchingNextPage
+      ) {
+        fetchNextPage();
+      }
+    };
+
+    checkPageHeight(); // Check immediately after render (or when data changes)
+
+    window.addEventListener("resize", checkPageHeight);
+
+    return () => window.removeEventListener("resize", checkPageHeight);
+  }, [data, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const allEvents = data?.pages.flatMap((page) => page.data) || [];
+
+  const filteredEvents = allEvents.filter((event) => {
     const matchesCategory =
       selectedCategory === "All" || event.type === selectedCategory;
-    return matchesSearch && matchesCategory;
+    return matchesCategory;
   });
 
   return (
@@ -116,15 +108,11 @@ export default function SearchPage() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b">
         <div className="max-w-5xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="max-w-5xl mx-auto px-4 py-4">
-              <div className="flex items-center gap-4">
-                <Link href="/" className="text-gray-800 hover:text-gray-600">
-                  <ArrowLeft className="w-6 h-6" />
-                </Link>
-                {/* <h1 className="text-2xl font-bold">Search</h1> */}
-              </div>
-            </div>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-gray-800 hover:text-gray-600">
+              <ArrowLeft className="w-6 h-6" />
+            </Link>
+
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                 <Search className="w-5 h-5 text-[#5850EC]" />
@@ -134,10 +122,11 @@ export default function SearchPage() {
                 ref={inputRef}
                 placeholder="Search Reventlify..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange}
                 className="w-full pl-10 pr-4 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
               />
             </div>
+
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-2 px-5 py-3 rounded-full ${
@@ -151,7 +140,6 @@ export default function SearchPage() {
             </button>
           </div>
 
-          {/* Category Filters */}
           {showFilters && (
             <div className="mt-4 pb-2 overflow-x-auto scrollbar-hide">
               <div className="flex gap-2 pb-2">
@@ -178,17 +166,20 @@ export default function SearchPage() {
         </div>
       </header>
 
-      {/* Search and Filters */}
-
-      {/* Results */}
       <main className="max-w-5xl mx-auto px-4 py-6">
+        {error && (
+          <div className="text-red-500 text-center mt-4">
+            Something went wrong. Please try again later.
+          </div>
+        )}
+
         {isLoading ? (
           <div className="space-y-4 md:grid md:grid-cols-2 md:gap-6 md:space-y-0 lg:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <EventCardSkeleton key={i} />
             ))}
           </div>
-        ) : data?.data.length === 0 ? (
+        ) : filteredEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="w-20 h-20 bg-[#5850EC]/10 rounded-full flex items-center justify-center mb-4">
               <Search className="w-10 h-10 text-[#5850EC]" />
@@ -201,10 +192,22 @@ export default function SearchPage() {
           </div>
         ) : (
           <div className="space-y-4 md:grid md:grid-cols-2 md:gap-6 md:space-y-0 lg:grid-cols-3">
-            {filteredEvents?.map((event) => (
-              <Link href={`/events/view/${event.id}`} key={event.id}>
+            {filteredEvents.map((event) => (
+              <Link
+                rel="canonical"
+                href={`/events/view/${slugify(event.name as string)}`}
+                key={event.id}
+              >
                 <EventCard event={event} coverLink={true} />
               </Link>
+            ))}
+          </div>
+        )}
+
+        {isFetchingNextPage && (
+          <div className="mt-6 space-y-4 md:grid md:grid-cols-2 md:gap-6 md:space-y-0 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <EventCardSkeleton key={`loading-${i}`} />
             ))}
           </div>
         )}

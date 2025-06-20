@@ -63,7 +63,7 @@ export const FeaturedCarousel = () => {
           There are currently no featured events. Get your event in front of
           thousands by featuring it here.
         </p>
-        <Link href="/create-event">
+        <Link rel="canonical" href="/create-event">
           <button className="bg-[#5850EC] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#6C63FF] transition-colors">
             Feature Your Event
           </button>
