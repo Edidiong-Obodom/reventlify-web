@@ -9,10 +9,12 @@ import { getRegimes, searchForRegimes } from "@/lib/api/getRegimes";
 import { EventCard, EventCardSkeleton } from "./event-card";
 import { categories } from "@/lib/constants";
 import { useDebounce } from "@/hooks/useDebounce";
-import { slugify } from "@/lib/helpers/formatEventDetail";
+import { useSearchParams } from "next/navigation";
 
 export default function SearchPage() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const partner = searchParams.get("partner");
   const inputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 500);
@@ -120,7 +122,9 @@ export default function SearchPage() {
               <input
                 type="text"
                 ref={inputRef}
-                placeholder="Search Reventlify..."
+                placeholder={`${
+                  partner ? "Refer and earn!" : "Search Reventlify..."
+                }`}
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="w-full pl-10 pr-4 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
@@ -169,7 +173,9 @@ export default function SearchPage() {
       <main className="max-w-5xl mx-auto px-4 py-6">
         {error && (
           <div className="text-red-500 text-center mt-4">
-            Something went wrong. Please try again later.
+            <span className="text-4xl ">😬 </span>Oops!
+            <br /> Sorry something went wrong. Please check your internet
+            connection and try again.
           </div>
         )}
 
@@ -180,26 +186,26 @@ export default function SearchPage() {
             ))}
           </div>
         ) : filteredEvents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-20 h-20 bg-[#5850EC]/10 rounded-full flex items-center justify-center mb-4">
-              <Search className="w-10 h-10 text-[#5850EC]" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">No events found</h2>
-            <p className="text-gray-500 text-center max-w-md">
-              We couldn't find any events matching your search. Try adjusting
-              your filters or search term.
-            </p>
-          </div>
+          <>
+            {!error && (
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="w-20 h-20 bg-[#5850EC]/10 rounded-full flex items-center justify-center mb-4">
+                  <Search className="w-10 h-10 text-[#5850EC]" />
+                </div>
+                <h2 className="text-xl font-semibold mb-2">No events found</h2>
+                <p className="text-gray-500 text-center max-w-md">
+                  We couldn't find any events matching your search. Try
+                  adjusting your filters or search term.
+                </p>
+              </div>
+            )}
+          </>
         ) : (
           <div className="space-y-4 md:grid md:grid-cols-2 md:gap-6 md:space-y-0 lg:grid-cols-3">
             {filteredEvents.map((event) => (
-              <Link
-                rel="canonical"
-                href={`/events/view/${slugify(event.name as string)}`}
-                key={event.id}
-              >
-                <EventCard event={event} coverLink={true} />
-              </Link>
+              <div rel="canonical" key={event.id}>
+                <EventCard event={event} session={session} />
+              </div>
             ))}
           </div>
         )}

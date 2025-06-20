@@ -2,6 +2,8 @@ import { Users, Heart, Share2 } from "lucide-react";
 import ImageFallback from "../image-fallback";
 import { Regime } from "@/lib/interfaces/regimeInterface";
 import moment from "moment";
+import { slugify } from "@/lib/helpers/formatEventDetail";
+import Link from "next/link";
 
 export const FeaturedEvent = ({ event }: { event: Partial<Regime> }) => {
   const handleDate = (start_date: string, end_date: string) => {
@@ -18,6 +20,23 @@ export const FeaturedEvent = ({ event }: { event: Partial<Regime> }) => {
       .month(Number(start_date?.split("-")[1]) - 1)
       .format("MMMM")
       .toUpperCase()}`;
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator
+        .share({
+          title: document.title,
+          text: "Check out this event on Reventlify!",
+          url: `${process.env.NEXT_PUBLIC_URL}/events/view/${slugify(
+            event.name as string
+          )}`,
+        })
+        .then(() => console.log("Successful share"))
+        .catch((error) => console.error("Error sharing", error));
+    } else {
+      alert("Sharing is not supported in your browser.");
+    }
   };
 
   return (
@@ -49,13 +68,19 @@ export const FeaturedEvent = ({ event }: { event: Partial<Regime> }) => {
           <h1 className="text-4xl font-bold mb-2">{event.name}</h1>
           <p className="text-white/80 mb-4 max-w-2xl">{event.description}</p>
           <div className="flex items-center gap-4">
-            <button className="bg-[#5850EC] px-6 py-3 rounded-xl font-medium hover:bg-[#6C63FF] transition-colors">
+            <Link
+              href={`/events/view/${slugify(event.name as string)}`}
+              className="bg-[#5850EC] px-6 py-3 rounded-xl font-medium hover:bg-[#6C63FF] transition-colors"
+            >
               Get Tickets
-            </button>
+            </Link>
             <button className="bg-white/20 backdrop-blur p-3 rounded-lg hover:bg-white/30 transition-colors">
               <Heart className="w-6 h-6" />
             </button>
-            <button className="bg-white/20 backdrop-blur p-3 rounded-lg hover:bg-white/30 transition-colors">
+            <button
+              onClick={handleShare}
+              className="bg-white/20 backdrop-blur p-3 rounded-lg hover:bg-white/30 transition-colors"
+            >
               <Share2 className="w-6 h-6" />
             </button>
           </div>

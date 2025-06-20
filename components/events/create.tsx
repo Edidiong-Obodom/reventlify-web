@@ -247,7 +247,7 @@ export default function CreateEventPage() {
     // Simulate API call
     try {
       const request = await fetch(
-        `${process.env.NEXT_PUBLIC_URL}/v1/user/regime/create`,
+        `${process.env.NEXT_PUBLIC_API_URL}/v1/user/regime/create`,
         {
           method: "POST",
           headers: {

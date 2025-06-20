@@ -6,7 +6,7 @@ export const getRegimes = async (
   limit: number = 10
 ): Promise<GetRegimes> => {
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_URL}/v1/user/regime/view?page=${page}&limit=${limit}`,
+    `${process.env.NEXT_PUBLIC_API_URL}/v1/user/regime/view?page=${page}&limit=${limit}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -28,7 +28,7 @@ export const getPopularRegimes = async (
   limit: number = 10
 ): Promise<GetRegimes> => {
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_URL}/v1/user/regime/view/popular?page=${page}&limit=${limit}`,
+    `${process.env.NEXT_PUBLIC_API_URL}/v1/user/regime/view/popular?page=${page}&limit=${limit}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -52,7 +52,7 @@ export const searchForRegimes = async ({
 }: SearchRegimes): Promise<GetRegimes> => {
   const res = await fetch(
     `${
-      process.env.NEXT_PUBLIC_URL
+      process.env.NEXT_PUBLIC_API_URL
     }/v1/user/regime/search?page=${page}&limit=${limit}&searchString=${searchString}${
       type ? `&type=${type}` : ""
     }`,

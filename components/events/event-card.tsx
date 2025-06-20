@@ -1,18 +1,43 @@
-import { Clock, Heart, MapPin } from "lucide-react";
+import { Clock, Heart, MapPin, Share2 } from "lucide-react";
 import ImageFallback from "../image-fallback";
 import Link from "next/link";
 import moment from "moment";
 import { Regime } from "@/lib/interfaces/regimeInterface";
 import { capitalizeEachWord, capitalizeFirst } from "@/lib";
 import { slugify } from "@/lib/helpers/formatEventDetail";
+import { Session } from "next-auth";
+import { useSearchParams } from "next/navigation";
 
 export const EventCard = ({
   event,
   coverLink,
+  session,
 }: {
   event: Partial<Regime>;
   coverLink?: boolean;
+  session?: Session | null;
 }) => {
+  const searchParams = useSearchParams();
+  const partner = searchParams.get("partner");
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator
+        .share({
+          title: document.title,
+          text: "Check out this event on Reventlify!",
+          url:
+            session && partner
+              ? `${process.env.NEXT_PUBLIC_URL}/events/view/${slugify(
+                  event?.name as string
+                )}?partner=${session.user.id}`
+              : window.location.href,
+        })
+        .then(() => console.log("Successful share"))
+        .catch((error) => console.error("Error sharing", error));
+    } else {
+      alert("Sharing is not supported in your browser.");
+    }
+  };
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all hover:-translate-y-0.5">
       <div className="relative h-48 group">
@@ -34,6 +59,14 @@ export const EventCard = ({
               .toUpperCase()}
           </div>
         </div>
+        {partner && (
+          <button
+            onClick={handleShare}
+            className="absolute bottom-4 right-4 bg-white p-2 rounded-lg hover:scale-110 transition-transform"
+          >
+            <Share2 className="w-5 h-5 text-gray-600" />
+          </button>
+        )}
         <button className="absolute top-4 right-4 bg-white p-2 rounded-lg hover:scale-110 transition-transform">
           <Heart className="w-5 h-5 text-gray-600" />
         </button>
@@ -55,7 +88,9 @@ export const EventCard = ({
         ) : (
           <Link
             rel="canonical"
-            href={`/events/view/${slugify(event.name as string)}`}
+            href={`/events/view/${slugify(event.name as string)}${
+              session && partner ? `?partner=${session.user.id}` : ""
+            }`}
             className="font-bold text-lg mb-2 hover:text-[#5850EC] cursor-pointer transition-colors"
           >
             {event.name}

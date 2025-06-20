@@ -11,6 +11,8 @@ import {
 import ImageFallback from "../image-fallback";
 import { SidebarItem } from "./sidebar-item";
 import { RefObject } from "react";
+import { useRouter } from "next/navigation";
+import { Session } from "next-auth";
 
 const menuItems = [
   {
@@ -50,9 +52,16 @@ interface SidebarProps {
   isMenuOpen: boolean;
   isMobile: boolean;
   sidebarRef: RefObject<HTMLDivElement | null>;
+  session: Session;
 }
 
-export const Sidebar = ({ isMenuOpen, isMobile, sidebarRef }: SidebarProps) => {
+export const Sidebar = ({
+  isMenuOpen,
+  isMobile,
+  sidebarRef,
+  session,
+}: SidebarProps) => {
+  const router = useRouter();
   return (
     <div
       ref={sidebarRef}
@@ -72,7 +81,7 @@ export const Sidebar = ({ isMenuOpen, isMobile, sidebarRef }: SidebarProps) => {
           <div className="w-20 h-20 rounded-full overflow-hidden mb-4 ring-2 ring-offset-2 ring-[#5850EC]">
             <ImageFallback
               src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&auto=format&fit=crop&q=60&ixlib=rb-4.0.3"
-              fallbackSrc="/placeholder.svg?height=80&width=80"
+              fallbackSrc="/placeholder-dp.jpg"
               alt="Profile"
               width={80}
               height={80}
@@ -109,6 +118,9 @@ export const Sidebar = ({ isMenuOpen, isMobile, sidebarRef }: SidebarProps) => {
       {/* Fixed Bottom Section */}
       <div className="p-4 border-t border-gray-100 bg-white">
         <button
+          onClick={() =>
+            router.push(`/events/search?partner=${session?.user?.id}`)
+          }
           className={`w-full bg-gradient-to-r from-[#5850EC] to-[#7668EC] text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg transition-all hover:-translate-y-0.5 ${
             !isMobile && !isMenuOpen ? "p-3" : ""
           }`}

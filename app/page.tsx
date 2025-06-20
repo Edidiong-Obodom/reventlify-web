@@ -84,6 +84,7 @@ const Page = () => {
             isMenuOpen={isMenuOpen}
             isMobile={isMobile}
             sidebarRef={sidebarRef}
+            session={session}
           />
         ) : (
           <NonAuthSidebar
@@ -97,8 +98,8 @@ const Page = () => {
           {session ? (
             <Header
               isMenuOpen={isMenuOpen}
-              setIsMenuOpen={setIsMenuOpen}
               isMobile={isMobile}
+              setIsMenuOpen={setIsMenuOpen}
             />
           ) : (
             <NonAuthHeader
@@ -116,9 +117,9 @@ const Page = () => {
           >
             {" "}
             {/* Added mt-16 for header spacing */}
-            <FeaturedCarousel />
+            <FeaturedCarousel session={session} />
             <CategoriesSection categories={categories} />
-            <EventsSection />
+            <EventsSection session={session} />
           </main>
         </div>
       </div>

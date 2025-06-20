@@ -13,6 +13,9 @@ import {
 } from "lucide-react";
 import ImageFallback from "../image-fallback";
 import Link from "next/link";
+import { Session } from "next-auth";
+import { useSearchParams } from "next/navigation";
+import { slugify } from "@/lib/helpers/formatEventDetail";
 
 interface EventDetailProps {
   event?: {
@@ -34,6 +37,7 @@ interface EventDetailProps {
     image: string;
     gallery: string[];
   };
+  session: Session | null;
 }
 
 const defaultEvent = {
@@ -58,9 +62,11 @@ const defaultEvent = {
     "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
 };
 
-export default function EventDetailPage({ event }: EventDetailProps) {
+export default function EventDetailPage({ event, session }: EventDetailProps) {
   const [isSaved, setIsSaved] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const searchParams = useSearchParams();
+  const partner = searchParams.get("partner");
 
   const handleShare = () => {
     if (navigator.share) {
@@ -68,7 +74,12 @@ export default function EventDetailPage({ event }: EventDetailProps) {
         .share({
           title: document.title,
           text: "Check out this event on Reventlify!",
-          url: window.location.href,
+          url:
+            session && partner
+              ? `${process.env.NEXT_PUBLIC_URL}/events/view/${slugify(
+                  event?.title as string
+                )}?partner=${session.user.id}`
+              : window.location.href,
         })
         .then(() => console.log("Successful share"))
         .catch((error) => console.error("Error sharing", error));

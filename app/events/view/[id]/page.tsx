@@ -12,11 +12,17 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { id } = await params;
 
-  const response = await searchForRegimes({
-    searchString: id,
-    page: 1,
-    limit: 1,
-  });
+  let response: any;
+  try {
+    response = await searchForRegimes({
+      searchString: id,
+      page: 1,
+      limit: 1,
+    });
+  } catch (error) {
+    console.error("Error fetching regimes:", error);
+    response = null;
+  }
 
   const event = response?.data?.[0];
 

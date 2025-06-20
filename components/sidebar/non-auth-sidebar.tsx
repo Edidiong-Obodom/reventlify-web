@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { SidebarItem } from "./sidebar-item";
 import Link from "next/link";
+import ImageFallback from "../image-fallback";
 
 const menuItems = [
   { label: "Home", link: "/", icon: <Home className="w-5 h-5" /> },
@@ -43,8 +44,15 @@ export const NonAuthSidebar = ({
       {/* Sidebar Header */}
       <div className="p-6 border-b border-gray-100">
         <div className="flex flex-col items-center">
-          <div className="w-20 h-20 rounded-full overflow-hidden mb-4 bg-[#5850EC] flex items-center justify-center">
-            <span className="text-white text-3xl font-bold">V</span>
+          <div className="w-20 h-20 rounded-full overflow-hidden mb-4 ring-2 ring-offset-2 ring-[#5850EC]">
+            <ImageFallback
+              src="/img/Reventlify.png"
+              fallbackSrc="/placeholder-dp.jpg"
+              alt="Profile"
+              width={80}
+              height={80}
+              className="object-cover w-full h-full"
+            />
           </div>
           <h2
             className={`text-xl font-semibold transition-opacity duration-300 ${

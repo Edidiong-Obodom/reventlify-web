@@ -6,8 +6,10 @@ import { searchForRegimes } from "@/lib/api/getRegimes";
 import { Loader2, AlertCircle } from "lucide-react";
 import EventDetailPage from "@/components/events/details";
 import { formatEventDetail } from "@/lib/helpers/formatEventDetail";
+import { useSession } from "next-auth/react";
 
 export default function EventDetailPageWrapper() {
+  const { data: session } = useSession();
   const { id } = useParams();
 
   const { data, isLoading, error } = useQuery({
@@ -39,5 +41,5 @@ export default function EventDetailPageWrapper() {
 
   const event = formatEventDetail(data.data[0]);
 
-  return <EventDetailPage event={event} />;
+  return <EventDetailPage event={event} session={session} />;
 }

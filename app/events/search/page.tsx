@@ -5,7 +5,19 @@ export const metadata = {
 };
 
 import SearchPage from "@/components/events/search";
+import { Loader2 } from "lucide-react";
+import { Suspense } from "react";
 
 export default function Search() {
-  return <SearchPage />;
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="animate-spin w-8 h-8 text-[#5850EC]" />
+        </div>
+      }
+    >
+      <SearchPage />
+    </Suspense>
+  );
 }

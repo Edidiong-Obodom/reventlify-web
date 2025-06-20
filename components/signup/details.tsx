@@ -21,7 +21,7 @@ const SignUpDetails = ({
     setError("");
     try {
       const req = await fetch(
-        `${process.env.NEXT_PUBLIC_URL}/v1/auth/signup/send-code`,
+        `${process.env.NEXT_PUBLIC_API_URL}/v1/auth/signup/send-code`,
         {
           method: "POST",
           headers: {

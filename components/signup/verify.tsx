@@ -31,7 +31,7 @@ export default function VerificationScreen({
     setLoading(true);
     try {
       const req = await fetch(
-        `${process.env.NEXT_PUBLIC_URL}/v1/auth/signup/register`,
+        `${process.env.NEXT_PUBLIC_API_URL}/v1/auth/signup/register`,
         {
           method: "POST",
           headers: {

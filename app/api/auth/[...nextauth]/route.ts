@@ -19,7 +19,7 @@ const authOptions: NextAuthOptions = {
         }
 
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_URL}/v1/auth/login`,
+          `${process.env.NEXT_PUBLIC_API_URL}/v1/auth/login`,
           {
             method: "POST",
             headers: {

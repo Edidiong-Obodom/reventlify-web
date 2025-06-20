@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Megaphone } from "lucide-react";
 import { FeaturedEvent } from "./featured-event";
-import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import { getPopularRegimes } from "@/lib/api/getRegimes";
 import Link from "next/link";
 import { FeaturedEventSkeleton } from "./featured-event-skeleton";
+import { Session } from "next-auth";
 
-export const FeaturedCarousel = () => {
-  const { data: session } = useSession();
-
+export const FeaturedCarousel = ({ session }: { session: Session | null }) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ["popular-regimes", session?.accessToken],
     queryFn: () => getPopularRegimes(session?.accessToken as string, 1, 3),
