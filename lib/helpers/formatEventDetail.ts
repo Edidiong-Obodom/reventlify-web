@@ -3,10 +3,9 @@ import moment from "moment";
 import { capitalizeFirst } from "..";
 
 export const formatEventDetail = (event: any) => {
-  const minPrice =
-    event.pricings
-      ?.filter((price: any) => price.amount !== 0)
-      .sort((a: any, b: any) => a.amount - b.amount)[0]?.amount ?? 0;
+  const minPrice = event.pricings?.sort(
+    (a: any, b: any) => a.amount - b.amount
+  );
 
   return {
     id: event.id,
@@ -24,7 +23,7 @@ export const formatEventDetail = (event: any) => {
       image: event.creator_photo ?? "/placeholder.svg",
     },
     description: event.description,
-    price: minPrice === 0 ? "Free" : `₦${minPrice.toLocaleString()}`,
+    pricings: minPrice,
     attendees: Number(event.total_ticket_sales ?? 0),
     image: event.regime_banner ?? "/placeholder.svg",
     gallery: event.regime_gallery,

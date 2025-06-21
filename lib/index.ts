@@ -55,3 +55,98 @@ export const capitalizeEachWord = (str: string) => {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 };
+
+export const parseMarkdown = (text: string): string => {
+  if (!text) return "";
+
+  // Convert literal '\n' strings to actual newlines
+  text = text.replace(/\\n/g, "\n");
+
+  // Apply WhatsApp-style formatting
+  let html = text
+    .replace(/\*(.*?)\*/g, "<strong>$1</strong>") // Bold
+    .replace(/_(.*?)_/g, "<em>$1</em>") // Italic
+    .replace(/~(.*?)~/g, "<u>$1</u>"); // Underline
+
+  const lines = html.split(/\r?\n/); // Split lines on actual line breaks
+  let parsed = "";
+  let inUnorderedList = false;
+  let inOrderedList = false;
+
+  lines.forEach((line) => {
+    // Handle unordered list
+    if (line.startsWith("- ")) {
+      if (!inUnorderedList) {
+        parsed += "<ul>";
+        inUnorderedList = true;
+      }
+      parsed += `<li>${line.substring(2)}</li>`;
+    }
+    // Handle ordered list
+    else if (line.match(/^\d+\.\s/)) {
+      if (!inOrderedList) {
+        parsed += "<ol>";
+        inOrderedList = true;
+      }
+      parsed += `<li>${line.replace(/^\d+\.\s/, "")}</li>`;
+    }
+    // Handle empty line (paragraph separator)
+    else if (line.trim() === "") {
+      if (inUnorderedList) {
+        parsed += "</ul>";
+        inUnorderedList = false;
+      }
+      if (inOrderedList) {
+        parsed += "</ol>";
+        inOrderedList = false;
+      }
+      parsed += "<br/>";
+    }
+    // Handle normal text
+    else {
+      if (inUnorderedList) {
+        parsed += "</ul>";
+        inUnorderedList = false;
+      }
+      if (inOrderedList) {
+        parsed += "</ol>";
+        inOrderedList = false;
+      }
+      parsed += `<p>${line}</p>`;
+    }
+  });
+
+  // Close any remaining list
+  if (inUnorderedList) parsed += "</ul>";
+  if (inOrderedList) parsed += "</ol>";
+
+  return parsed;
+};
+
+export const removeMarkdownSyntax = (text: string): string => {
+  if (!text) return "";
+
+  let plainText = text;
+
+  // Step 1: Convert the literal '\n' to actual line breaks
+  plainText = plainText.replace(/\\n/g, "\n");
+
+  // Step 2: Remove WhatsApp-style bold, italic, underline markers
+  plainText = plainText.replace(/\*(.*?)\*/g, "$1"); // *bold*
+  plainText = plainText.replace(/_(.*?)_/g, "$1"); // _italic_
+  plainText = plainText.replace(/~(.*?)~/g, "$1"); // ~underline~
+
+  // Step 3: Remove unordered list markers (- )
+  plainText = plainText.replace(/^- /gm, "");
+
+  // Step 4: Remove ordered list markers (1. , 2. , etc.)
+  plainText = plainText.replace(/^\d+\.\s/gm, "");
+
+  // Step 5: Remove line breaks
+  plainText = plainText.replace(/\r?\n/g, " ");
+
+  // Step 6: Remove multiple spaces and trim
+  plainText = plainText.replace(/\s\s+/g, " ").trim();
+
+  return plainText;
+};

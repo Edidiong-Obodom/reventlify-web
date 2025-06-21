@@ -1,6 +1,7 @@
 import { Metadata, ResolvingMetadata } from "next";
 import EventDetailPageWrapper from "@/components/events/details-wrapper";
 import { searchForRegimes } from "@/lib/api/getRegimes";
+import { removeMarkdownSyntax } from "@/lib";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -35,10 +36,10 @@ export async function generateMetadata(
 
   return {
     title: `${event.name} | Reventlify`,
-    description: event.description,
+    description: removeMarkdownSyntax(event.description),
     openGraph: {
       title: `${event.name} | Reventlify`,
-      description: event.description,
+      description: removeMarkdownSyntax(event.description),
       images: [
         {
           url: event.regime_banner || "/placeholder.jpg",
@@ -51,7 +52,7 @@ export async function generateMetadata(
     twitter: {
       card: "summary_large_image",
       title: `${event.name} | Reventlify`,
-      description: event.description,
+      description: removeMarkdownSyntax(event.description),
       images: [event.regime_banner || "/placeholder.jpg"],
     },
   };

@@ -4,6 +4,7 @@ import { Regime } from "@/lib/interfaces/regimeInterface";
 import moment from "moment";
 import { slugify } from "@/lib/helpers/formatEventDetail";
 import Link from "next/link";
+import { removeMarkdownSyntax } from "@/lib";
 
 export const FeaturedEvent = ({ event }: { event: Partial<Regime> }) => {
   const handleDate = (start_date: string, end_date: string) => {
@@ -66,7 +67,9 @@ export const FeaturedEvent = ({ event }: { event: Partial<Regime> }) => {
             </div>
           </div>
           <h1 className="text-4xl font-bold mb-2">{event.name}</h1>
-          <p className="text-white/80 mb-4 max-w-2xl">{event.description}</p>
+          <p className="text-white/80 mb-4 max-w-2xl truncate">
+            {removeMarkdownSyntax(event.description as string)}
+          </p>
           <div className="flex items-center gap-4">
             <Link
               href={`/events/view/${slugify(event.name as string)}`}

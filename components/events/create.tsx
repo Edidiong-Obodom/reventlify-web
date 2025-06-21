@@ -30,6 +30,16 @@ import { getRomanNumeral, randomNumber } from "@/lib";
 import { signOut, useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import AdditionalDetailsSection from "./additional-details-section";
+import TicketPricingSection from "./pricing/form";
+import LineUpSection from "./line-up";
+
+interface LineUp {
+  id: string;
+  title: string;
+  time: string;
+  image: string;
+}
 
 interface LGA {
   id: number;
@@ -108,6 +118,8 @@ export default function CreateEventPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [pin, setPin] = useState(["", "", "", ""]);
   const [hideGallery, setHideGallery] = useState<boolean>(false);
+  const [lineUps, setLineUps] = useState<LineUp[]>([]);
+
   const [pricingCopy, setPricingCopy] = useState([
     {
       pricingName: "Regular",
@@ -224,6 +236,8 @@ export default function CreateEventPage() {
       regimeMediaBase64: imagePreview,
       regimeStartTime: `${formData.regimeStartTime}:00`,
       regimeEndTime: `${formData.regimeEndTime}:00`,
+      // Optional: only attach if lineUps exist
+      ...(lineUps.length > 0 && { regimeLineUps: lineUps }),
     };
     const valueCheck = spreader(
       [...Object.keys(newFormData)],
@@ -903,279 +917,13 @@ export default function CreateEventPage() {
             </div>
 
             {/* Pricing */}
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <h2 className="text-lg font-semibold mb-4">Ticket Pricing</h2>
+            <TicketPricingSection
+              pricingCopy={pricingCopy}
+              setPricingCopy={setPricingCopy}
+            />
 
-              {pricingCopy?.map((pricing, i) => {
-                if (pricingCopy[i]?.saved === true) {
-                  return (
-                    <div
-                      className={`flex flex-col ${i > 0 ? "mt-4" : ""}`}
-                      key={randomNumber()}
-                    >
-                      <h3 className="text-[1.5rem] mb-4">{i + 1}.</h3>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label
-                              htmlFor="organizer"
-                              className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                              Pricing Name
-                            </label>
-                            <div className="relative">
-                              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                <User className="w-5 h-5 text-gray-400" />
-                              </div>
-                              <input
-                                type="text"
-                                name="pricingName"
-                                value={pricingCopy[i].pricingName}
-                                disabled
-                                placeholder="e.g. Ashfak Sayem"
-                                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label
-                              htmlFor="price"
-                              className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                              Ticket Price
-                            </label>
-                            <div className="relative">
-                              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                <span className="text-[1.5rem] text-gray-400">
-                                  ₦
-                                </span>
-                              </div>
-                              <input
-                                type="number"
-                                name="pricingAmount"
-                                value={pricingCopy[i].pricingAmount}
-                                disabled
-                                placeholder="e.g. 120"
-                                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label
-                              htmlFor="price"
-                              className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                              Total Seats
-                            </label>
-                            <div className="relative">
-                              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                <Sofa className="w-5 h-5 text-gray-400" />
-                              </div>
-                              <input
-                                type="number"
-                                name="pricingTotalSeats"
-                                value={pricingCopy[i].pricingTotalSeats}
-                                disabled
-                                placeholder="e.g. 4500"
-                                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
-                              />
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPricingCopy(
-                                pricingCopy.filter((v, ind) => ind !== i)
-                              );
-                            }}
-                            onKeyDown={() => {
-                              setPricingCopy(
-                                pricingCopy.filter((v, ind) => ind !== i)
-                              );
-                            }}
-                            className={`w-1/4 mt-4 py-2 rounded-xl font-medium transition-all bg-[#DC2626] text-white hover:bg-[#EF4444] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
-                          >
-                            <Trash2 />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div
-                      className={`flex flex-col ${i > 0 ? "mt-4" : ""}`}
-                      key={randomNumber()}
-                    >
-                      <h3 className="text-[1.5rem] mb-4">{i + 1}.</h3>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label
-                              htmlFor="organizer"
-                              className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                              Pricing Name
-                              <span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative">
-                              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                <User className="w-5 h-5 text-gray-400" />
-                              </div>
-                              <input
-                                type="text"
-                                name="pricingName"
-                                onChange={(e) => {
-                                  pricing.pricingName = e.target.value.trim();
-                                }}
-                                placeholder="e.g. Ashfak Sayem"
-                                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label
-                              htmlFor="price"
-                              className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                              Ticket Price
-                              <span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative">
-                              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                <span className="text-[1.5rem] text-gray-400">
-                                  ₦
-                                </span>
-                              </div>
-                              <input
-                                type="number"
-                                name="pricingAmount"
-                                onChange={(e) => {
-                                  pricing.pricingAmount = Number(
-                                    e.target.value.trim()
-                                  );
-                                }}
-                                placeholder="e.g. 120"
-                                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label
-                              htmlFor="price"
-                              className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                              Total Seats<span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative">
-                              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                <Sofa className="w-5 h-5 text-gray-400" />
-                              </div>
-                              <input
-                                type="number"
-                                name="pricingTotalSeats"
-                                onChange={(e) => {
-                                  pricing.pricingTotalSeats = Number(
-                                    e.target.value.trim()
-                                  );
-                                }}
-                                placeholder="e.g. 4500"
-                                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
-                              />
-                            </div>
-                          </div>
-                          <div className="flex flex-row justify-between">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setPricingCopy(
-                                  pricingCopy.map((v, ind) => {
-                                    if (ind === i) {
-                                      return {
-                                        ...pricing,
-                                        saved: true,
-                                      };
-                                    } else {
-                                      return v;
-                                    }
-                                  })
-                                );
-                              }}
-                              onKeyDown={() => {
-                                setPricingCopy(
-                                  pricingCopy.map((v, ind) => {
-                                    if (ind === i) {
-                                      return {
-                                        ...pricing,
-                                        saved: true,
-                                      };
-                                    } else {
-                                      return v;
-                                    }
-                                  })
-                                );
-                              }}
-                              className={`w-1/4 mt-4 py-2 rounded-xl font-medium transition-all bg-[#16A34A] text-white hover:bg-[#22C55E] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
-                            >
-                              <Save />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setPricingCopy(
-                                  pricingCopy.filter((v, ind) => ind !== i)
-                                );
-                              }}
-                              onKeyDown={() => {
-                                setPricingCopy(
-                                  pricingCopy.filter((v, ind) => ind !== i)
-                                );
-                              }}
-                              className={`w-1/4 mt-4 py-2 rounded-xl font-medium transition-all bg-[#DC2626] text-white hover:bg-[#EF4444] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
-                            >
-                              <Trash2 />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-              })}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setPricingCopy((current) => [
-                    ...current,
-                    {
-                      saved: false,
-                      pricingTotalSeats: 50,
-                      pricingAmount: 0,
-                      pricingName: "Regular",
-                    },
-                  ]);
-                }}
-                onKeyDown={() => {
-                  setPricingCopy((current) => [
-                    ...current,
-                    {
-                      saved: false,
-                      pricingTotalSeats: 50,
-                      pricingAmount: 0,
-                      pricingName: "Regular",
-                    },
-                  ]);
-                }}
-                className={`w-1/4 mt-4 py-4 rounded-xl font-medium transition-all bg-[#5850EC] text-white hover:bg-[#6C63FF] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
-              >
-                <CirclePlus />
-              </button>
-            </div>
+            {/* LineUp */}
+            <LineUpSection lineUps={lineUps} setLineUps={setLineUps} />
 
             {/* Code Input */}
             <div className="bg-white p-6 rounded-xl shadow-sm">
@@ -1216,35 +964,10 @@ export default function CreateEventPage() {
             </div>
 
             {/* Additional Details */}
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <h2 className="text-lg font-semibold mb-4">Additional Details</h2>
-
-              <div className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="description"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Description<span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <div className="absolute top-3 left-3 pointer-events-none">
-                      <AlignLeft className="w-5 h-5 text-gray-400" />
-                    </div>
-                    <textarea
-                      id="description"
-                      name="regimeDescription"
-                      value={formData.regimeDescription}
-                      onChange={handleChange}
-                      rows={5}
-                      required
-                      placeholder="Describe your event..."
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
-                    ></textarea>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AdditionalDetailsSection
+              data={formData.regimeDescription}
+              handleChange={handleChange}
+            />
 
             {/* Mobile Submit Button */}
             <div className="md:hidden">

@@ -16,6 +16,11 @@ import Link from "next/link";
 import { Session } from "next-auth";
 import { useSearchParams } from "next/navigation";
 import { slugify } from "@/lib/helpers/formatEventDetail";
+import { Pricing } from "@/lib/interfaces/regimeInterface";
+import MobilePricing from "./pricing/mobile";
+import PricingSidebar from "./pricing/desktop";
+import { parseMarkdown } from "@/lib";
+import DOMPurify from "dompurify";
 
 interface EventDetailProps {
   event?: {
@@ -32,7 +37,7 @@ interface EventDetailProps {
       image: string;
     };
     description: string;
-    price: string;
+    pricings: Pricing[];
     attendees: number;
     image: string;
     gallery: string[];
@@ -203,7 +208,7 @@ export default function EventDetailPage({ event, session }: EventDetailProps) {
       <div className="flex flex-col md:flex-row md:max-w-7xl md:mx-auto md:mt-16 md:px-8 md:gap-8">
         {/* Main Content */}
         <div className="flex-1 px-4 pt-12 md:pt-0">
-          <h1 className="text-3xl md:text-4xl font-bold mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold mb-8">
             {event?.title}
           </h1>
 
@@ -214,7 +219,7 @@ export default function EventDetailPage({ event, session }: EventDetailProps) {
                 <Calendar className="w-6 h-6 text-[#5850EC]" />
               </div>
               <div className="ml-4">
-                <h3 className="text-xl font-semibold">{event?.date}</h3>
+                <h3 className="text-[1.2rem] font-semibold">{event?.date}</h3>
                 <p className="text-gray-500">
                   {event?.day}, {event?.startTime} - {event?.endTime}
                 </p>
@@ -226,7 +231,9 @@ export default function EventDetailPage({ event, session }: EventDetailProps) {
                 <MapPin className="w-6 h-6 text-[#5850EC]" />
               </div>
               <div className="ml-4">
-                <h3 className="text-xl font-semibold">{event?.location}</h3>
+                <h3 className="text-[1.2rem] font-semibold">
+                  {event?.location}
+                </h3>
                 <p className="text-gray-500">{event?.address}</p>
               </div>
             </div>
@@ -244,7 +251,7 @@ export default function EventDetailPage({ event, session }: EventDetailProps) {
               </div>
               <div className="ml-4 flex flex-1 items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-semibold">
+                  <h3 className="text-[1.2rem] font-semibold">
                     {event?.organizer?.name}
                   </h3>
                   <p className="text-gray-500">Organizer</p>
@@ -265,16 +272,24 @@ export default function EventDetailPage({ event, session }: EventDetailProps) {
 
           {/* About Event */}
           <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">About Event</h2>
-            <p className="text-gray-600 leading-relaxed">
+            <h2 className="text-1xl font-bold mb-4">About Event</h2>
+            {/* <p className="text-gray-600 leading-relaxed">
               {event?.description}
-            </p>
+            </p> */}
+            <div
+              className="prose prose-p:my-1 prose-ul:my-1 prose-li:my-1" // Optional: if you're using Tailwind typography
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(
+                  parseMarkdown(event?.description as string)
+                ),
+              }}
+            />
           </div>
 
           {/* Additional Content for Desktop */}
           <div className="block space-y-8 mb-8">
             <div>
-              <h2 className="text-2xl font-bold mb-4">Lineup</h2>
+              <h2 className="text-1xl font-bold mb-4">Lineup</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[1, 2, 3, 4].map((i) => (
                   <div
@@ -306,7 +321,7 @@ export default function EventDetailPage({ event, session }: EventDetailProps) {
 
             {event?.gallery && event?.gallery.length > 0 && (
               <div>
-                <h2 className="text-2xl font-bold mb-4">Gallery</h2>
+                <h2 className="text-1xl font-bold mb-4">Gallery</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {event?.gallery.map((galleryImage, i) => (
                     <div
@@ -332,55 +347,11 @@ export default function EventDetailPage({ event, session }: EventDetailProps) {
         </div>
 
         {/* Sidebar for Desktop */}
-        <div className="hidden md:block w-80 shrink-0">
-          <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold">{event?.price}</h3>
-              <div className="flex gap-2">
-                <button className="w-10 h-10 rounded-full bg-[#5850EC]/10 flex items-center justify-center">
-                  <Heart className="w-5 h-5 text-[#5850EC]" />
-                </button>
-                <button
-                  onClick={handleShare}
-                  className="w-10 h-10 rounded-full bg-[#5850EC]/10 flex items-center justify-center"
-                >
-                  <Share2 className="w-5 h-5 text-[#5850EC]" />
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-4 mb-6">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Date</span>
-                <span className="font-medium">{event?.date}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Time</span>
-                <span className="font-medium">
-                  {event?.startTime} - {event?.endTime}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Location</span>
-                <span className="font-medium">{event?.location}</span>
-              </div>
-            </div>
-
-            <button className="w-full bg-[#5850EC] text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#6C63FF] transition-colors">
-              Buy Ticket
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+        <PricingSidebar pricings={event?.pricings as Pricing[]} />
       </div>
 
       {/* Mobile Buy Ticket Button */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
-        <button className="w-full bg-[#5850EC] text-white py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-[#6C63FF] transition-colors">
-          <span>Buy Ticket {event?.price}</span>
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      </div>
+      <MobilePricing pricings={event?.pricings as Pricing[]} />
     </div>
   );
 }
