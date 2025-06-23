@@ -23,7 +23,7 @@ export const NonAuthHeader = ({
   };
   return (
     <header className="fixed top-0 left-0 right-0 bg-[#5850EC] text-white z-30">
-      <div className="max-w-7xl mx-auto">
+      <div className={`max-w-7xl mx-auto md:w-[80%]`}>
         <div className="flex items-center justify-between p-4">
           {/* Mobile Menu Button */}
           <button
@@ -79,14 +79,17 @@ export const NonAuthHeader = ({
           {/* Navigation Links - Desktop */}
           <div className="hidden md:flex items-center gap-6">
             <Link
+              href="/about"
+              className="hover:text-white/80 transition-colors"
+            >
+              About
+            </Link>
+            <Link
               rel="canonical"
               href="/events/create"
               className="hover:text-white/80 transition-colors"
             >
               Create Events
-            </Link>
-            <Link href="#" className="hover:text-white/80 transition-colors">
-              Help Center
             </Link>
             <Link
               rel="canonical"

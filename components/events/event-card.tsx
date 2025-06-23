@@ -116,7 +116,9 @@ export const EventCard = ({
             ))}
           </div>
           <span className="text-[#5850EC]">
-            +{event.total_ticket_sales} Going
+            {event.total_ticket_sales == "0"
+              ? "Be the first to join!"
+              : `+${event.total_ticket_sales} Going`}
           </span>
         </div>
         <div className="flex items-center text-gray-500">

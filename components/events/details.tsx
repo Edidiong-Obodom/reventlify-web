@@ -195,7 +195,9 @@ export default function EventDetailPage({ event, session }: EventDetailProps) {
               ))}
             </div>
             <span className="text-[#5850EC] font-medium">
-              +{event?.attendees} Going
+              {event?.attendees === 0
+                ? "Be the first to join!"
+                : `+${event?.attendees} Going`}
             </span>
           </div>
           <button className="bg-[#5850EC] text-white px-6 py-2 rounded-full hover:bg-[#6C63FF] transition-colors">

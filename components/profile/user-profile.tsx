@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Edit, ChevronDown, Pencil, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 interface Interest {
   id: string;
@@ -23,6 +23,7 @@ const interests: Interest[] = [
 ];
 
 export default function UserProfilePage() {
+  const { data: session } = useSession();
   const [showFullBio, setShowFullBio] = useState(false);
   const router = useRouter();
 
@@ -80,7 +81,9 @@ export default function UserProfilePage() {
           <div className="hidden md:block flex-1">
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-2xl font-bold mb-2">Ashfak Sayem</h2>
+                <h2 className="text-2xl font-bold mb-2">
+                  {session?.user.firstName ?? "John Doe"}
+                </h2>
                 <div className="flex items-center gap-6 mb-4">
                   <div className="text-center">
                     <div className="font-bold">350</div>

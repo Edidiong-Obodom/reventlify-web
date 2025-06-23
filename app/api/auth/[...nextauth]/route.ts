@@ -41,7 +41,7 @@ const authOptions: NextAuthOptions = {
         if (user) {
           return {
             id: user.user.user,
-            firstName: user.user.firstName,
+            firstName: user.user.firstName ?? user.user.userName,
             lastName: user.user.lastName,
             email: user.user.email,
             token: user.user.token, // Ensure this exists in the API response

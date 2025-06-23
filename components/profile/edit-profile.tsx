@@ -6,32 +6,39 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Camera, X, Check } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { categories } from "@/lib/constants";
 
 interface Interest {
   id: string;
   name: string;
   color: string;
 }
-
-const allInterests: Interest[] = [
-  { id: "games", name: "Games Online", color: "bg-[#5850EC]" },
-  { id: "concert", name: "Concert", color: "bg-[#E25C4B]" },
-  { id: "music", name: "Music", color: "bg-[#F4A261]" },
-  { id: "art", name: "Art", color: "bg-[#7B68EE]" },
-  { id: "movie", name: "Movie", color: "bg-[#4ECDC4]" },
-  { id: "sports", name: "Sports", color: "bg-[#6FDFDF]" },
-  { id: "food", name: "Food & Drink", color: "bg-[#FF6B6B]" },
-  { id: "tech", name: "Technology", color: "bg-[#8A2BE2]" },
-  { id: "travel", name: "Travel", color: "bg-[#FF8C00]" },
-  { id: "books", name: "Books", color: "bg-[#3CB371]" },
-  { id: "fashion", name: "Fashion", color: "bg-[#FF69B4]" },
-  { id: "fitness", name: "Fitness", color: "bg-[#20B2AA]" },
+const categoryStyle = [
+  { color: "bg-[#5850EC]" },
+  { color: "bg-[#E25C4B]" },
+  { color: "bg-[#F4A261]" },
+  { color: "bg-[#7B68EE]" },
+  { color: "bg-[#4ECDC4]" },
+  { color: "bg-[#6FDFDF]" },
+  { color: "bg-[#FF6B6B]" },
+  { color: "bg-[#8A2BE2]" },
+  { color: "bg-[#FF8C00]" },
+  { color: "bg-[#3CB371]" },
+  { color: "bg-[#FF69B4]" },
+  { color: "bg-[#20B2AA]" },
 ];
 
+const allInterests = categories.map((category, i) => ({
+  ...category,
+  color: categoryStyle[i]?.color ?? categoryStyle[1].color,
+}));
+
 export default function EditProfilePage() {
-  const [name, setName] = useState("Ashfak Sayem");
+  const { data: session } = useSession();
+  const [name, setName] = useState("");
   const [bio, setBio] = useState(
-    "Enjoy your favorite dishe and a lovely your friends and family and have a great time. Food from local food trucks will be available for purchase."
+    "Enjoy your favorite dishes and a lovely your friends and family and have a great time. Food from local food trucks will be available for purchase."
   );
   const [selectedInterests, setSelectedInterests] = useState<string[]>([
     "games",
@@ -132,6 +139,7 @@ export default function EditProfilePage() {
               type="text"
               id="name"
               value={name}
+              placeholder={`${session?.user.firstName ?? "John Doe"}`}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
             />
@@ -190,7 +198,7 @@ export default function EditProfilePage() {
             <input
               type="email"
               id="email"
-              value="ashfak.sayem@example.com"
+              value={`${session?.user?.email ?? "ashfak.sayem@example.com"}`}
               disabled
               className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-gray-50 text-gray-500"
             />

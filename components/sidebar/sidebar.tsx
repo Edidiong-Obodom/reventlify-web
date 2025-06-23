@@ -93,7 +93,7 @@ export const Sidebar = ({
               !isMobile && !isMenuOpen ? "opacity-0" : "opacity-100"
             }`}
           >
-            John Doe
+            {session?.user?.firstName ?? "John Doe"}
           </h2>
         </div>
       </div>

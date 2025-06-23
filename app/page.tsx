@@ -10,6 +10,7 @@ import { NonAuthHeader } from "@/components/header/non-auth-header";
 import { NonAuthSidebar } from "@/components/sidebar/non-auth-sidebar";
 import { FeaturedCarousel } from "@/components/events/featured-events-carousel";
 import { Music, Briefcase, Plane, Utensils, Volleyball } from "lucide-react";
+import Footer from "@/components/footer";
 
 const categories = [
   {
@@ -70,7 +71,7 @@ const Page = () => {
 
   if (isSet) {
     return (
-      <div className="flex min-h-screen md:relative bg-gray-50 eddyContainerFull">
+      <div className="flex flex-col min-h-screen md:relative bg-gray-50 eddyContainerFull">
         {/* Backdrop Overlay */}
         {isMobile && isMenuOpen && (
           <div
@@ -111,8 +112,8 @@ const Page = () => {
           {/* <div className="hidden md:block md:w-[10%]"></div> */}
 
           <main
-            className={`max-w-7xl mx-auto p-4 md:p-8 md:w-[90%] md:h-[87vh] overflow-y-scroll scrollbar-hide mt-16${
-              session ? " md:mr-0" : ""
+            className={`max-w-7xl mx-auto p-4 md:p-8 md:h-[87vh] overflow-y-scroll scrollbar-hide mt-16${
+              session ? " md:w-[90%] md:mr-0" : ""
             }`}
           >
             {" "}
@@ -120,6 +121,7 @@ const Page = () => {
             <FeaturedCarousel session={session} />
             <CategoriesSection categories={categories} />
             <EventsSection session={session} />
+            <Footer />
           </main>
         </div>
       </div>

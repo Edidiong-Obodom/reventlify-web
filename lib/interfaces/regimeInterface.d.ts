@@ -63,6 +63,7 @@ export interface Category {
   id: number;
   name: string;
   icon: React.ElementType;
+  color?: string;
 }
 
 export interface CategoryCardProps {

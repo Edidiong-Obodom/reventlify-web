@@ -13,14 +13,18 @@ import ImageFallback from "../image-fallback";
 
 const menuItems = [
   { label: "Home", link: "/", icon: <Home className="w-5 h-5" /> },
-  { label: "Browse Events", link: "/", icon: <Calendar className="w-5 h-5" /> },
+  { label: "About", link: "/about", icon: <Info className="w-5 h-5" /> },
+  {
+    label: "Browse Events",
+    link: "/events/search",
+    icon: <Calendar className="w-5 h-5" />,
+  },
   {
     label: "Create Events",
     link: "/events/create",
     icon: <Calendar className="w-5 h-5" />,
   },
   { label: "Help Center", link: "/", icon: <HelpCircle className="w-5 h-5" /> },
-  { label: "About Us", link: "/", icon: <Info className="w-5 h-5" /> },
 ];
 
 interface NonAuthSidebarProps {
