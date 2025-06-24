@@ -14,7 +14,9 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Logo and Contact */}
         <div>
-          <h2 className="text-2xl font-bold mb-4">Reventlify</h2>
+          <h2 className="text-2xl font-bold mb-4">
+            <Link href="/">Reventlify</Link>
+          </h2>
           <p className="mb-2 flex items-center gap-2">
             <a
               href="mailto:support@reventlify.com"

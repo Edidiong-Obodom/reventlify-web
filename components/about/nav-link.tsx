@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 // Top Links Navigation
 export default function AboutNavLinks() {
   const links = [
+    { name: "Home", href: "/" },
     { name: "About", href: "/about" },
     { name: "Team", href: "/team" },
     { name: "Investor Relations", href: "/about/investors" },
