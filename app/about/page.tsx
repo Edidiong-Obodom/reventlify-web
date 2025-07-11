@@ -33,7 +33,7 @@ export default function AboutPage() {
 
       <section className="max-w-7xl mx-auto px-4 py-16 grid gap-12">
         <div className="text-center">
-          <h2 className="text-3xl font-bold mb-4 text-[#5850EC]">
+          <h2 className="text-3xl font-bold mb-4">
             Why Reventlify?
           </h2>
           <p className="text-gray-600 max-w-3xl mx-auto">
@@ -49,7 +49,7 @@ export default function AboutPage() {
               key={index}
               className="bg-white rounded-2xl shadow p-6 hover:shadow-lg transition"
             >
-              <h3 className="text-xl font-semibold text-[#5850EC] mb-2">
+              <h3 className="text-xl font-semibold mb-2">
                 {feature.title}
               </h3>
               <p className="text-gray-600">{feature.description}</p>
@@ -60,7 +60,7 @@ export default function AboutPage() {
         <FAQSection />
 
         <div className="text-center mt-12">
-          <h2 className="text-3xl font-bold mb-4 text-[#5850EC]">
+          <h2 className="text-3xl font-bold mb-4">
             Seamless, Secure, and Rewarding
           </h2>
           <p className="text-gray-600 max-w-3xl mx-auto mb-6">

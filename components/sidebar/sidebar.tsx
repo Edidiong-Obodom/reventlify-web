@@ -6,6 +6,8 @@ import {
   Clock,
   Heart,
   ImagePlus,
+  Ticket,
+  ArrowRightLeft,
   Settings,
 } from "lucide-react";
 import ImageFallback from "../image-fallback";
@@ -40,6 +42,16 @@ const menuItems = [
     label: "Create Event",
     link: "/events/create",
     icon: <ImagePlus className="w-5 h-5" />,
+  },
+  {
+    label: "My Tickets",
+    link: "/tickets",
+    icon: <Ticket className="w-5 h-5" />,
+  },
+  {
+    label: "Transactions",
+    link: "/transactions",
+    icon: <ArrowRightLeft className="w-5 h-5" />,
   },
   // {
   //   label: "Settings",

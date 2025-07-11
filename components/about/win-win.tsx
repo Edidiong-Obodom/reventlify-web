@@ -5,7 +5,7 @@ import { Users, Ticket, DollarSign } from "lucide-react"; // Optional icons for 
 export default function WinWinDiagram() {
   return (
     <section className="py-16 bg-white">
-      <h2 className="text-3xl font-bold text-center text-[#5850EC] mb-8">
+      <h2 className="text-3xl font-bold text-center mb-8">
         Everyone Wins with Reventlify
       </h2>
 

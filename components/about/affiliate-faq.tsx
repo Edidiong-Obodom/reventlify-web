@@ -25,7 +25,7 @@ export default function FAQSection() {
 
   return (
     <section className="py-16 bg-gray-50">
-      <h2 className="text-3xl font-bold text-center text-[#5850EC] mb-8">
+      <h2 className="text-3xl font-bold text-center mb-8">
         Frequently Asked Questions
       </h2>
       <div className="max-w-4xl mx-auto space-y-6">
@@ -34,7 +34,7 @@ export default function FAQSection() {
             key={index}
             className="bg-white p-6 rounded-2xl shadow hover:shadow-lg transition"
           >
-            <h3 className="font-semibold text-lg mb-2 text-[#5850EC]">
+            <h3 className="font-semibold text-lg mb-2">
               {faq.question}
             </h3>
             <p className="text-gray-600">{faq.answer}</p>
