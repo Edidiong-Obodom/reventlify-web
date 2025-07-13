@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -9,190 +9,24 @@ import {
   X,
   CreditCard,
   TrendingUp,
-  TrendingDown,
-  Clock,
   CheckCircle,
-  XCircle,
-  AlertCircle,
   Eye,
 } from "lucide-react";
-
-interface Transaction {
-  id: string;
-  client_id: string;
-  regime_id: string;
-  transaction_action: string;
-  transaction_type: string;
-  actual_amount: number;
-  amount: number;
-  company_charge: number;
-  payment_gateway_charge: number;
-  currency: string;
-  status: "success" | "failed" | "pending";
-  payment_gateway: string;
-  created_at: string;
-  regime_name: string;
-  affiliate_user_name?: string;
-}
-
-// Mock API response data
-const mockApiResponse = {
-  message: "Transactions fetched successfully",
-  data: [
-    {
-      id: "txn_103",
-      client_id: "user_200",
-      regime_id: "regime_55",
-      transaction_action: "ticket-purchase",
-      transaction_type: "inter-debit",
-      actual_amount: 10000,
-      amount: 9500,
-      company_charge: 300,
-      payment_gateway_charge: 200,
-      currency: "ngn",
-      status: "success",
-      payment_gateway: "Paystack",
-      created_at: "2025-07-10T10:00:00.000Z",
-      regime_name: "Summer Tech Fest",
-      affiliate_user_name: "janedoe",
-    },
-    {
-      id: "txn_104",
-      client_id: "user_200",
-      regime_id: "regime_56",
-      transaction_action: "ticket-purchase",
-      transaction_type: "inter-debit",
-      actual_amount: 15000,
-      amount: 14250,
-      company_charge: 450,
-      payment_gateway_charge: 300,
-      currency: "ngn",
-      status: "success",
-      payment_gateway: "Flutterwave",
-      created_at: "2025-07-08T14:30:00.000Z",
-      regime_name: "Creative Design Workshop",
-      affiliate_user_name: "designpro",
-    },
-    {
-      id: "txn_105",
-      client_id: "user_200",
-      regime_id: "regime_57",
-      transaction_action: "ticket-refund",
-      transaction_type: "inter-credit",
-      actual_amount: 8000,
-      amount: 7600,
-      company_charge: 240,
-      payment_gateway_charge: 160,
-      currency: "ngn",
-      status: "success",
-      payment_gateway: "Paystack",
-      created_at: "2025-07-05T09:15:00.000Z",
-      regime_name: "Business Networking Event",
-      affiliate_user_name: "biznetwork",
-    },
-    {
-      id: "txn_106",
-      client_id: "user_200",
-      regime_id: "regime_58",
-      transaction_action: "ticket-purchase",
-      transaction_type: "inter-debit",
-      actual_amount: 25000,
-      amount: 23750,
-      company_charge: 750,
-      payment_gateway_charge: 500,
-      currency: "ngn",
-      status: "failed",
-      payment_gateway: "Paystack",
-      created_at: "2025-07-03T16:45:00.000Z",
-      regime_name: "Premium Conference 2025",
-      affiliate_user_name: "conforganizer",
-    },
-    {
-      id: "txn_107",
-      client_id: "user_200",
-      regime_id: "regime_59",
-      transaction_action: "ticket-purchase",
-      transaction_type: "inter-debit",
-      actual_amount: 12000,
-      amount: 11400,
-      company_charge: 360,
-      payment_gateway_charge: 240,
-      currency: "ngn",
-      status: "pending",
-      payment_gateway: "Flutterwave",
-      created_at: "2025-07-01T11:20:00.000Z",
-      regime_name: "Music Festival Lagos",
-      affiliate_user_name: "musiclover",
-    },
-  ] as Transaction[],
-  page: 1,
-  limit: 5,
-  total: 20,
-};
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "success":
-      return "bg-green-100 text-green-800";
-    case "failed":
-      return "bg-red-100 text-red-800";
-    case "pending":
-      return "bg-yellow-100 text-yellow-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
-};
-
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case "success":
-      return <CheckCircle className="w-4 h-4" />;
-    case "failed":
-      return <XCircle className="w-4 h-4" />;
-    case "pending":
-      return <Clock className="w-4 h-4" />;
-    default:
-      return <AlertCircle className="w-4 h-4" />;
-  }
-};
-
-const getTransactionIcon = (action: string, type: string) => {
-  if (action === "ticket-refund" || type === "inter-credit") {
-    return <TrendingUp className="w-5 h-5 text-green-600" />;
-  }
-  return <TrendingDown className="w-5 h-5 text-red-600" />;
-};
-
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
-
-const formatDateTime = (dateString: string) => {
-  return new Date(dateString).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-};
-
-const formatAmount = (amount: number, currency: string) => {
-  const symbol = currency.toLowerCase() === "ngn" ? "₦" : "$";
-  return `${symbol}${(amount / 100).toFixed(2)}`;
-};
-
-const formatActionText = (action: string) => {
-  return action
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-};
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { getTransactions, searchForTransactions } from "@/lib/api/transaction";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useSession } from "next-auth/react";
+import {
+  formatActionText,
+  formatAmount,
+  formatDate,
+  getStatusColor,
+  getStatusIcon,
+  getTransactionIcon,
+  isAffiliate,
+} from "@/utils/transactions";
+import TransactionDetailModal from "./modal";
+import { Transaction } from "@/lib/interfaces/transactionInterface";
 
 export default function TransactionHistoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -202,43 +36,91 @@ export default function TransactionHistoryPage() {
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const { data: session } = useSession();
+  const limit = 10;
 
-  const transactions = mockApiResponse.data;
+  const debouncedSearch = useDebounce(searchTerm, 500);
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    error,
+  } = useInfiniteQuery({
+    queryKey: [
+      "transactions",
+      session?.accessToken,
+      debouncedSearch,
+      dateRange.start,
+      dateRange.end,
+    ],
+    queryFn: async ({ pageParam = 1 }) => {
+      if (debouncedSearch.trim()) {
+        return searchForTransactions(
+          session?.accessToken!,
+          debouncedSearch,
+          dateRange.start || undefined,
+          dateRange.end || undefined,
+          pageParam,
+          limit
+        );
+      } else {
+        return getTransactions(
+          session?.accessToken!,
+          pageParam,
+          limit,
+          dateRange.start || undefined,
+          dateRange.end || undefined
+        );
+      }
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.data.length < limit) return undefined;
+      return allPages.length + 1;
+    },
+    enabled: !!session?.accessToken,
+    initialPageParam: 1,
+  });
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >=
+          document.body.offsetHeight - 500 &&
+        hasNextPage &&
+        !isFetchingNextPage
+      ) {
+        fetchNextPage();
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  useEffect(() => {
+    const checkPageHeight = () => {
+      if (
+        window.innerHeight >= document.body.offsetHeight - 500 &&
+        hasNextPage &&
+        !isFetchingNextPage
+      ) {
+        fetchNextPage();
+      }
+    };
+    checkPageHeight();
+    window.addEventListener("resize", checkPageHeight);
+    return () => window.removeEventListener("resize", checkPageHeight);
+  }, [data, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const transactions = data?.pages.flatMap((page) => page.data) || [];
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((transaction) => {
       // Status filter
       if (selectedStatus !== "all" && transaction.status !== selectedStatus) {
         return false;
-      }
-
-      // Search filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        const eventName = transaction.regime_name.toLowerCase();
-        const transactionId = transaction.id.toLowerCase();
-        const action = transaction.transaction_action.toLowerCase();
-        const gateway = transaction.payment_gateway.toLowerCase();
-
-        if (
-          !eventName.includes(searchLower) &&
-          !transactionId.includes(searchLower) &&
-          !action.includes(searchLower) &&
-          !gateway.includes(searchLower)
-        ) {
-          return false;
-        }
-      }
-
-      // Date range filter
-      if (dateRange.start && dateRange.end) {
-        const transactionDate = new Date(transaction.created_at);
-        const startDate = new Date(dateRange.start);
-        const endDate = new Date(dateRange.end);
-
-        if (transactionDate < startDate || transactionDate > endDate) {
-          return false;
-        }
       }
 
       return true;
@@ -257,9 +139,12 @@ export default function TransactionHistoryPage() {
 
   const totalAmount = filteredTransactions.reduce((sum, transaction) => {
     if (transaction.status === "success") {
-      return transaction.transaction_type === "inter-credit"
-        ? sum + transaction.amount
-        : sum - transaction.amount;
+      return transaction.transaction_type === "inter-credit" &&
+        transaction?.beneficiary === transaction?.client_id
+        ? sum + Number(transaction.actual_amount)
+        : transaction?.beneficiary === session?.user?.id
+        ? sum + Number(transaction.actual_amount)
+        : sum - Number(transaction.amount);
     }
     return sum;
   }, 0);
@@ -451,7 +336,21 @@ export default function TransactionHistoryPage() {
 
       {/* Transactions List */}
       <main className="max-w-5xl mx-auto px-4 py-6">
-        {filteredTransactions.length === 0 ? (
+        {isLoading || isFetchingNextPage ? (
+          <div className="mt-6 space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={`loading-${i}`}
+                className="h-20 bg-white rounded-lg shadow-sm animate-pulse"
+              />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center text-red-500">
+            Failed to load transactions.
+          </div>
+        ) : filteredTransactions.length === 0 &&
+          data?.pages[0]?.data.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="w-20 h-20 bg-[#5850EC]/10 rounded-full flex items-center justify-center mb-4">
               <CreditCard className="w-10 h-10 text-[#5850EC]" />
@@ -490,7 +389,12 @@ export default function TransactionHistoryPage() {
                           {transaction.regime_name}
                         </h3>
                         <p className="text-gray-600 text-sm">
-                          {formatActionText(transaction.transaction_action)}
+                          {isAffiliate(
+                            transaction.client_id,
+                            transaction?.beneficiary
+                          )
+                            ? "Affiliate"
+                            : formatActionText(transaction.transaction_action)}
                         </p>
                       </div>
 
@@ -506,7 +410,7 @@ export default function TransactionHistoryPage() {
                             ? "+"
                             : "-"}
                           {formatAmount(
-                            transaction.amount,
+                            transaction.actual_amount,
                             transaction.currency
                           )}
                         </div>
@@ -557,7 +461,10 @@ export default function TransactionHistoryPage() {
                       {transaction.transaction_type === "inter-credit"
                         ? "+"
                         : "-"}
-                      {formatAmount(transaction.amount, transaction.currency)}
+                      {formatAmount(
+                        transaction.actual_amount,
+                        transaction.currency
+                      )}
                     </div>
                     <div className="text-sm text-gray-500">
                       {formatDate(transaction.created_at)}
@@ -580,223 +487,6 @@ export default function TransactionHistoryPage() {
           }}
         />
       )}
-    </div>
-  );
-}
-
-interface TransactionDetailModalProps {
-  transaction: Transaction;
-  onClose: () => void;
-}
-
-function TransactionDetailModal({
-  transaction,
-  onClose,
-}: TransactionDetailModalProps) {
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4">
-        <div className="p-4 sm:p-6">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-4 sm:mb-6">
-            <h2 className="text-lg sm:text-xl font-bold">
-              Transaction Details
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Transaction Status */}
-          <div className="flex items-center gap-3 mb-4 sm:mb-6 p-3 sm:p-4 bg-gray-50 rounded-lg">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0">
-              {getTransactionIcon(
-                transaction.transaction_action,
-                transaction.transaction_type
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-base sm:text-lg truncate">
-                {transaction.regime_name}
-              </h3>
-              <p className="text-gray-600 text-sm">
-                {formatActionText(transaction.transaction_action)}
-              </p>
-            </div>
-            <div className="text-right flex-shrink-0">
-              <div
-                className={`text-lg sm:text-xl font-bold ${
-                  transaction.transaction_type === "inter-credit"
-                    ? "text-green-600"
-                    : "text-gray-900"
-                }`}
-              >
-                {transaction.transaction_type === "inter-credit" ? "+" : "-"}
-                {formatAmount(transaction.amount, transaction.currency)}
-              </div>
-              <span
-                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                  transaction.status
-                )}`}
-              >
-                {getStatusIcon(transaction.status)}
-                <span className="hidden sm:inline">
-                  {transaction.status.charAt(0).toUpperCase() +
-                    transaction.status.slice(1)}
-                </span>
-              </span>
-            </div>
-          </div>
-
-          {/* Transaction Information */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">
-                  Transaction Details
-                </h4>
-                <div className="space-y-2 text-xs sm:text-sm">
-                  <div className="flex justify-between items-start">
-                    <span className="text-gray-600">Transaction ID:</span>
-                    <span className="font-medium font-mono text-right break-all ml-2">
-                      {transaction.id}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Date & Time:</span>
-                    <span className="font-medium text-right ml-2">
-                      {formatDateTime(transaction.created_at)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Type:</span>
-                    <span className="font-medium capitalize text-right ml-2">
-                      {transaction.transaction_type.replace("-", " ")}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Payment Gateway:</span>
-                    <span className="font-medium text-right ml-2">
-                      {transaction.payment_gateway}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Currency:</span>
-                    <span className="font-medium uppercase text-right ml-2">
-                      {transaction.currency}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">
-                  Event Information
-                </h4>
-                <div className="space-y-2 text-xs sm:text-sm">
-                  <div className="flex justify-between items-start">
-                    <span className="text-gray-600">Event Name:</span>
-                    <span className="font-medium text-right ml-2 break-words">
-                      {transaction.regime_name}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start">
-                    <span className="text-gray-600">Event ID:</span>
-                    <span className="font-medium font-mono text-right ml-2 break-all">
-                      {transaction.regime_id}
-                    </span>
-                  </div>
-                  {transaction.affiliate_user_name && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Affiliate:</span>
-                      <span className="font-medium text-right ml-2">
-                        @{transaction.affiliate_user_name}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">
-                  Amount Breakdown
-                </h4>
-                <div className="space-y-2 text-xs sm:text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Original Amount:</span>
-                    <span className="font-medium">
-                      {formatAmount(
-                        transaction.actual_amount,
-                        transaction.currency
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Platform Fee:</span>
-                    <span className="font-medium text-red-600">
-                      -
-                      {formatAmount(
-                        transaction.company_charge,
-                        transaction.currency
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Gateway Fee:</span>
-                    <span className="font-medium text-red-600">
-                      -
-                      {formatAmount(
-                        transaction.payment_gateway_charge,
-                        transaction.currency
-                      )}
-                    </span>
-                  </div>
-                  <div className="border-t pt-2 mt-2">
-                    <div className="flex justify-between">
-                      <span className="font-semibold">Final Amount:</span>
-                      <span className="font-bold text-base sm:text-lg">
-                        {formatAmount(transaction.amount, transaction.currency)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">
-                  User Information
-                </h4>
-                <div className="space-y-2 text-xs sm:text-sm">
-                  <div className="flex justify-between items-start">
-                    <span className="text-gray-600">Client ID:</span>
-                    <span className="font-medium font-mono text-right ml-2 break-all">
-                      {transaction.client_id}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-6 pt-4 sm:pt-6 border-t">
-            <button
-              onClick={onClose}
-              className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
-            >
-              Close
-            </button>
-            <button className="flex-1 bg-[#5850EC] text-white py-3 rounded-lg hover:bg-[#6C63FF] transition-colors text-sm sm:text-base">
-              Download Receipt
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

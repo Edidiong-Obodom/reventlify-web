@@ -1,6 +1,6 @@
 import { Metadata, ResolvingMetadata } from "next";
 import EventDetailPageWrapper from "@/components/events/details-wrapper";
-import { searchForRegimes } from "@/lib/api/getRegimes";
+import { searchForRegimes } from "@/lib/api/regimes";
 import { removeMarkdownSyntax } from "@/lib";
 
 type Props = {

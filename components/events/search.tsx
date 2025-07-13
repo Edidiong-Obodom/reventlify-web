@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Search, SlidersHorizontal } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { getRegimes, searchForRegimes } from "@/lib/api/getRegimes";
+import { getRegimes, searchForRegimes } from "@/lib/api/regimes";
 import { EventCard, EventCardSkeleton } from "./event-card";
 import { categories } from "@/lib/constants";
 import { useDebounce } from "@/hooks/useDebounce";

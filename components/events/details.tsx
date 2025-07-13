@@ -45,29 +45,10 @@ interface EventDetailProps {
   session: Session | null;
 }
 
-const defaultEvent = {
-  id: "1",
-  title: "International Band Music Concert",
-  date: "14 December, 2021",
-  day: "Tuesday",
-  startTime: "4:00PM",
-  endTime: "9:00PM",
-  location: "Gala Convention Center",
-  address: "36 Guild Street London, UK",
-  organizer: {
-    name: "Ashfak Sayem",
-    image:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-  },
-  description:
-    "Enjoy your favorite dishes and a lovely time with your friends and family and have a great time. Food from local food trucks will be available for purchase. Live performances from international bands will keep you entertained throughout the evening.",
-  price: "$120",
-  attendees: 20,
-  image:
-    "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-};
-
-export default function EventDetailPage({ event, session }: EventDetailProps) {
+export default function EventDetailPage({
+  event,
+  session,
+}: Readonly<EventDetailProps>) {
   const [isSaved, setIsSaved] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const searchParams = useSearchParams();
@@ -349,11 +330,19 @@ export default function EventDetailPage({ event, session }: EventDetailProps) {
         </div>
 
         {/* Sidebar for Desktop */}
-        <PricingSidebar pricings={event?.pricings as Pricing[]} />
+        <PricingSidebar
+          pricings={event?.pricings as Pricing[]}
+          regimeId={event?.id as string}
+          affiliate={partner}
+        />
       </div>
 
       {/* Mobile Buy Ticket Button */}
-      <MobilePricing pricings={event?.pricings as Pricing[]} />
+      <MobilePricing
+        pricings={event?.pricings as Pricing[]}
+        regimeId={event?.id as string}
+        affiliate={partner}
+      />
     </div>
   );
 }

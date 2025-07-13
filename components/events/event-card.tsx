@@ -76,11 +76,14 @@ export const EventCard = ({
           <Clock className="w-4 h-4" />
           <span>{moment(event.start_time, "HH:mm:ss").format("h:mm A")}</span>
           <span className="px-2 py-0.5 bg-[#5850EC]/10 text-[#5850EC] rounded-full font-medium">
-            ₦{" "}
             {event.pricings
               ?.filter((price) => price.amount !== 0)
-              .sort((a, b) => a.amount - b.amount)[0]
-              ?.amount.toLocaleString() ?? "free"}
+              .sort((a, b) => a.amount - b.amount)[0]?.amount === undefined
+              ? "Free"
+              : `₦ ${event.pricings
+                  ?.filter((price) => price.amount !== 0)
+                  .sort((a, b) => a.amount - b.amount)[0]
+                  ?.amount.toLocaleString()}`}
           </span>
         </div>
         {coverLink ? (

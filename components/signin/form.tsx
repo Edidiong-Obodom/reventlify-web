@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import FullScreenLoader from "../common/loaders/fullScreenLoader";
 
 const SigninForm = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [email, setEmail] = useState("");
@@ -24,6 +27,7 @@ const SigninForm = () => {
       email,
       password,
       redirect: false,
+      callbackUrl,
     });
 
     if (res?.error) {
@@ -31,12 +35,13 @@ const SigninForm = () => {
       setError("Invalid email or password");
     } else {
       setLoading(false);
-      router.push("/"); // Redirect to dashboard on success
+      router.push(res?.url ?? "/");
     }
   };
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
+      {loading && <FullScreenLoader />}
       {error && <p className="text-red-500 text-md text-center">{error}</p>}
       <h2 className="text-2xl font-semibold text-gray-900">Sign in</h2>
 

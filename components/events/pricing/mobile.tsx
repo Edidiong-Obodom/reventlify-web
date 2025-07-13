@@ -1,11 +1,30 @@
 import { useState } from "react";
 import { ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 import { Pricing } from "@/lib/interfaces/regimeInterface";
+import { signOut, useSession } from "next-auth/react";
+import toast from "react-hot-toast";
+import FullScreenLoader from "@/components/common/loaders/fullScreenLoader";
+import { useRouter } from "next/navigation";
 
-export default function MobilePricing({ pricings }: { pricings: Pricing[] }) {
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(0);
+export default function MobilePricing({
+  pricings,
+  regimeId,
+  affiliate,
+}: Readonly<{
+  pricings: Pricing[];
+  regimeId: string;
+  affiliate?: string | null;
+}>) {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const selectedPricing = pricings[selectedIndex];
+  const maxSelectable = Math.min(10, selectedPricing.available_seats);
+  const total = selectedPricing.amount * quantity;
 
   const handleSelectPricing = (index: number) => {
     setSelectedIndex(index);
@@ -13,15 +32,69 @@ export default function MobilePricing({ pricings }: { pricings: Pricing[] }) {
     setIsExpanded(true); // Automatically expand when pricing is selected
   };
 
-  const selectedPricing =
-    selectedIndex !== null ? pricings[selectedIndex] : null;
-  const maxSelectable = selectedPricing
-    ? Math.min(10, selectedPricing.available_seats)
-    : 10;
-  const total = selectedPricing ? selectedPricing.amount * quantity : 0;
+  const handleBuyTicket = async () => {
+    setIsLoading(true);
+
+    try {
+      console.log(affiliate, session?.user.id);
+      const body: any = {
+        amount: selectedPricing.amount,
+        pricingId: selectedPricing.id,
+        regimeId,
+        counter: quantity,
+      };
+
+      if (affiliate && affiliate !== session?.user.id) {
+        body.affiliate = affiliate;
+      }
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/v1/user/tickets/purchase`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.accessToken}`, // Replace this
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (response.status === 401 || response.status === 403) {
+        return signOut({
+          callbackUrl: `/signin?callbackUrl=${encodeURIComponent(
+            window.location.href
+          )}`,
+        });
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return toast.error(errorData?.message ?? "Purchase failed");
+      }
+
+      const result = await response.json();
+
+      if (selectedPricing.amount === 0) {
+        return router.push("/tickets");
+      }
+
+      const authorizationUrl = result?.authorization_url;
+      if (authorizationUrl) {
+        window.location.href = authorizationUrl; // ⬅️ Redirect to Paystack
+      } else {
+        return toast.error("No authorization URL returned");
+      }
+    } catch (error: any) {
+      console.error("Purchase error:", error.message);
+      return toast.error(error?.message ?? "Purchase failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t p-4">
+      {isLoading && <FullScreenLoader />}
       {/* Toggle Arrow */}
       <div className="flex justify-center mb-3">
         <button
@@ -80,7 +153,11 @@ export default function MobilePricing({ pricings }: { pricings: Pricing[] }) {
           </div>
 
           {/* Buy Button */}
-          <button className="w-full bg-[#5850EC] text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#6C63FF] transition-colors">
+          <button
+            onClick={handleBuyTicket}
+            disabled={isLoading}
+            className="w-full bg-[#5850EC] text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#6C63FF] transition-colors"
+          >
             <span>
               Buy {quantity} Ticket{quantity > 1 ? "s" : ""} - ₦
               {total.toLocaleString()}

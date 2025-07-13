@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Megaphone } from "lucide-react";
 import { FeaturedEvent } from "./featured-event";
 import { useQuery } from "@tanstack/react-query";
-import { getPopularRegimes } from "@/lib/api/getRegimes";
+import { getPopularRegimes } from "@/lib/api/regimes";
 import Link from "next/link";
 import { FeaturedEventSkeleton } from "./featured-event-skeleton";
 import { Session } from "next-auth";

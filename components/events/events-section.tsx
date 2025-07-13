@@ -1,7 +1,7 @@
 import { ChevronRight, CalendarPlus } from "lucide-react";
 import { EventCard, EventCardSkeleton } from "./event-card";
 import { useQuery } from "@tanstack/react-query";
-import { getRegimes } from "@/lib/api/getRegimes";
+import { getRegimes } from "@/lib/api/regimes";
 import Link from "next/link";
 import { Session } from "next-auth";
 

@@ -2,11 +2,12 @@
 
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { searchForRegimes } from "@/lib/api/getRegimes";
+import { searchForRegimes } from "@/lib/api/regimes";
 import { Loader2, AlertCircle } from "lucide-react";
 import EventDetailPage from "@/components/events/details";
 import { formatEventDetail } from "@/lib/helpers/formatEventDetail";
 import { useSession } from "next-auth/react";
+import FullScreenLoader from "../common/loaders/fullScreenLoader";
 
 export default function EventDetailPageWrapper() {
   const { data: session } = useSession();
@@ -19,11 +20,7 @@ export default function EventDetailPageWrapper() {
   });
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="animate-spin w-8 h-8 text-[#5850EC]" />
-      </div>
-    );
+    return <FullScreenLoader backGround="light" />;
   }
 
   if (error || !data?.data?.length) {

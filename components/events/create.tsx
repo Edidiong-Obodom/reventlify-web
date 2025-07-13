@@ -273,7 +273,11 @@ export default function CreateEventPage() {
       );
       const response = await request.json();
       if (request.status === 401 || request.status === 403) {
-        signOut({ callbackUrl: "/signin" });
+        return signOut({
+          callbackUrl: `/signin?callbackUrl=${encodeURIComponent(
+            window.location.href
+          )}`,
+        });
       } else if (request.status !== 200) {
         return toast.error(response?.message);
       } else {
@@ -385,41 +389,31 @@ export default function CreateEventPage() {
               </Link>
               {/* <h1 className="text-xl md:text-2xl font-bold">Create New Event</h1> */}
             </div>
-
-            {session ? (
-              <button
-                type="submit"
-                form="event-form"
-                disabled={isSubmitting || isSuccess}
-                className={`px-6 py-2 rounded-lg font-medium transition-all ${
-                  isSuccess
-                    ? "bg-green-500 text-white"
-                    : "bg-[#5850EC] text-white hover:bg-[#6C63FF]"
-                } disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Creating...</span>
-                  </>
-                ) : isSuccess ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    <span>Created!</span>
-                  </>
-                ) : (
-                  <span>Create Event</span>
-                )}
-              </button>
-            ) : (
-              <Link
-                rel="canonical"
-                className="px-6 py-2 rounded-lg font-medium bg-[#5850EC] text-white hover:bg-[#6C63FF] flex items-center gap-2"
-                href={"/signin"}
-              >
-                Sign in
-              </Link>
-            )}
+            {/* create button */}
+            <button
+              type="submit"
+              form="event-form"
+              disabled={isSubmitting || isSuccess}
+              className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                isSuccess
+                  ? "bg-green-500 text-white"
+                  : "bg-[#5850EC] text-white hover:bg-[#6C63FF]"
+              } disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2`}
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Creating...</span>
+                </>
+              ) : isSuccess ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Created!</span>
+                </>
+              ) : (
+                <span>Create Event</span>
+              )}
+            </button>
           </div>
         </header>
 

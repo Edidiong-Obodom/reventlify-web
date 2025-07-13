@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -10,148 +10,99 @@ import {
   User,
   Download,
   Send,
-  Share2,
-  QrCode,
-  CheckCircle,
-  AlertCircle,
   Ticket,
-  X,
+  AlertCircle,
 } from "lucide-react";
 import ImageFallback from "../image-fallback";
-
-interface ApiTicketDetail {
-  id: string;
-  pricing_id: string;
-  owner_id: string;
-  buyer_id: string;
-  transaction_id: string;
-  transferred: boolean;
-  created_at: string;
-  pricing: {
-    name: string;
-    amount: number;
-    regime: {
-      id: string;
-      name: string;
-      venue: string;
-      address: string;
-      city: string;
-      state: string;
-      country: string;
-      type: string;
-      media: string[];
-      status: "pending" | "ongoing" | "ended";
-      start_date: string;
-      end_date: string;
-      start_time: string;
-      end_time: string;
-      creator: {
-        id: string;
-        user_name: string;
-      };
-    };
-  };
-}
-
-// Mock ticket detail data
-const mockTicketDetail: ApiTicketDetail = {
-  id: "tk_001",
-  pricing_id: "prc_001",
-  owner_id: "usr_002",
-  buyer_id: "usr_001",
-  transaction_id: "txn_001",
-  transferred: false,
-  created_at: "2025-07-10T10:00:00Z",
-  pricing: {
-    name: "VIP Access",
-    amount: 20000,
-    regime: {
-      id: "r_01",
-      name: "Tech Expo 2025",
-      venue: "Eko Hotel",
-      address: "Plot 1415 Adetokunbo Ademola Street",
-      city: "Lagos",
-      state: "Lagos",
-      country: "Nigeria",
-      type: "conference",
-      media: [
-        "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-      ],
-      status: "pending",
-      start_date: "2025-08-01",
-      end_date: "2025-08-03",
-      start_time: "09:00:00",
-      end_time: "17:00:00",
-      creator: {
-        id: "usr_003",
-        user_name: "organizer_guy",
-      },
-    },
-  },
-};
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "pending":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    case "ongoing":
-      return "bg-green-100 text-green-800 border-green-200";
-    case "ended":
-      return "bg-gray-100 text-gray-800 border-gray-200";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-200";
-  }
-};
-
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case "pending":
-      return <Clock className="w-5 h-5" />;
-    case "ongoing":
-      return <CheckCircle className="w-5 h-5" />;
-    case "ended":
-      return <AlertCircle className="w-5 h-5" />;
-    default:
-      return <Clock className="w-5 h-5" />;
-  }
-};
-
-const getStatusText = (status: string) => {
-  switch (status) {
-    case "pending":
-      return "Event Upcoming";
-    case "ongoing":
-      return "Event Live Now";
-    case "ended":
-      return "Event Completed";
-    default:
-      return status;
-  }
-};
-
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-};
-
-const formatTime = (timeString: string) => {
-  return new Date(`2000-01-01T${timeString}`).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-};
-
-const formatPrice = (amount: number) => {
-  return (amount / 100).toFixed(2); // Convert from cents to dollars
-};
+import {
+  formatDate,
+  formatPrice,
+  formatTime,
+  getDetailsStatusColor,
+  getStatusIcon,
+  getStatusText,
+} from "@/utils/tickets";
+import { useSession } from "next-auth/react";
+import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { searchForTickets } from "@/lib/api/tickets";
+import FullScreenLoader from "../common/loaders/fullScreenLoader";
+import { capitalizeFirst } from "@/lib";
+import { slugify } from "@/lib/helpers/formatEventDetail";
+import QRCodeStyling from "qr-code-styling";
+import { TransferModal } from "./modal";
 
 export default function TicketDetailPage() {
+  const ref = useRef<HTMLDivElement>(null);
   const [showTransferModal, setShowTransferModal] = useState(false);
-  const ticketDetail = mockTicketDetail;
+  const [qrCode, setQrCode] = useState<QRCodeStyling | null>(null);
+  const { data: session } = useSession();
+  const { id } = useParams();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["ticket-detail", id],
+    queryFn: () =>
+      searchForTickets(
+        session?.accessToken as string,
+        id as string,
+        undefined,
+        undefined,
+        1,
+        1
+      ),
+  });
+
+  // Step 1: Create QR code instance once when data is available
+  useEffect(() => {
+    if (data?.data?.length) {
+      const styleCode = new QRCodeStyling({
+        width: 120,
+        height: 120,
+        type: "svg",
+        data: data.data[0].id,
+        image: undefined, // Optional: you can add a logo later
+        dotsOptions: {
+          color: "#5850EC",
+          type: "rounded",
+        },
+        cornersSquareOptions: {
+          type: "extra-rounded",
+          color: "#5850EC",
+        },
+        backgroundOptions: {
+          color: "#ffffff",
+        },
+      });
+
+      setQrCode(styleCode);
+    }
+  }, [data]);
+
+  // Step 2: Mount QR code into DOM when `qrCode` is ready
+  useEffect(() => {
+    if (ref.current && qrCode) {
+      qrCode.append(ref.current);
+    }
+  }, [qrCode]);
+
+  if (isLoading) {
+    return <FullScreenLoader backGround="light" />;
+  }
+
+  if (error || !data?.data?.length) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-center px-4">
+        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+        <h2 className="text-2xl font-semibold mb-2">Ticket Not Found</h2>
+        <p className="text-gray-500 max-w-md mb-4">
+          We couldn't find the ticket you're looking for. You may have
+          transferred ownership of the ticket.
+        </p>
+      </div>
+    );
+  }
+
+  const ticketDetail = data?.data[0];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -168,9 +119,9 @@ export default function TicketDetailPage() {
               </Link>
               <h1 className="text-xl font-bold">Ticket Details</h1>
             </div>
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+            {/* <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
               <Share2 className="w-6 h-6" />
-            </button>
+            </button> */}
           </div>
         </div>
       </header>
@@ -179,7 +130,7 @@ export default function TicketDetailPage() {
       <main className="max-w-3xl mx-auto px-4 py-6">
         {/* Status Banner */}
         <div
-          className={`flex items-center gap-3 p-4 rounded-xl border mb-6 ${getStatusColor(
+          className={`flex items-center gap-3 p-4 rounded-xl border mb-6 ${getDetailsStatusColor(
             ticketDetail.pricing.regime.status
           )}`}
         >
@@ -197,7 +148,7 @@ export default function TicketDetailPage() {
                 "This event has concluded"}
             </div>
           </div>
-          {ticketDetail.transferred && (
+          {ticketDetail.is_transferred && (
             <div className="ml-auto">
               <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
                 Transferred
@@ -211,7 +162,7 @@ export default function TicketDetailPage() {
           {/* Event Image */}
           <div className="relative h-48 md:h-64">
             <ImageFallback
-              src={ticketDetail.pricing.regime.media[0] || "/placeholder.svg"}
+              src={ticketDetail.pricing.regime.media || "/placeholder.svg"}
               fallbackSrc="/placeholder.svg?height=300&width=600"
               alt={ticketDetail.pricing.regime.name}
               fill
@@ -245,7 +196,8 @@ export default function TicketDetailPage() {
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="flex-shrink-0">
                 <div className="w-32 h-32 bg-white rounded-xl border-2 border-dashed border-[#5850EC]/30 flex items-center justify-center">
-                  <QrCode className="w-16 h-16 text-[#5850EC]" />
+                  {/* <QrCode className="w-16 h-16 text-[#5850EC]" /> */}
+                  <div ref={ref} />
                 </div>
               </div>
               <div className="flex-1 text-center md:text-left">
@@ -281,8 +233,8 @@ export default function TicketDetailPage() {
                         </div>
                         <div className="text-sm">
                           {ticketDetail.pricing.regime.address},{" "}
-                          {ticketDetail.pricing.regime.city},{" "}
-                          {ticketDetail.pricing.regime.state}
+                          {capitalizeFirst(ticketDetail.pricing.regime.city)},{" "}
+                          {capitalizeFirst(ticketDetail.pricing.regime.state)}
                         </div>
                       </div>
                     </div>
@@ -320,10 +272,12 @@ export default function TicketDetailPage() {
                     <div className="flex justify-between">
                       <span>Price:</span>
                       <span className="font-medium text-[#5850EC]">
-                        ₦{formatPrice(ticketDetail.pricing.amount)}
+                        {formatPrice(ticketDetail?.pricing?.amount) === "0"
+                          ? "Free"
+                          : `₦${formatPrice(ticketDetail?.pricing?.amount)}`}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-col">
                       <span>Transaction ID:</span>
                       <span className="font-medium text-sm">
                         {ticketDetail.transaction_id}
@@ -345,13 +299,13 @@ export default function TicketDetailPage() {
                         {formatDate(ticketDetail.created_at)}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-col">
                       <span>Buyer ID:</span>
                       <span className="font-medium">
                         {ticketDetail.buyer_id}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-col">
                       <span>Current Owner:</span>
                       <span className="font-medium">
                         {ticketDetail.owner_id}
@@ -361,12 +315,12 @@ export default function TicketDetailPage() {
                       <span>Status:</span>
                       <span
                         className={`font-medium ${
-                          ticketDetail.transferred
+                          ticketDetail.is_transferred
                             ? "text-blue-600"
                             : "text-green-600"
                         }`}
                       >
-                        {ticketDetail.transferred ? "Transferred" : "Active"}
+                        {ticketDetail.is_transferred ? "Transferred" : "Active"}
                       </span>
                     </div>
                   </div>
@@ -400,7 +354,7 @@ export default function TicketDetailPage() {
           </button>
 
           {ticketDetail.pricing.regime.status !== "ended" &&
-            !ticketDetail.transferred && (
+            !ticketDetail.is_transferred && (
               <button
                 onClick={() => setShowTransferModal(true)}
                 className="flex items-center justify-center gap-2 border border-[#5850EC] text-[#5850EC] py-3 px-4 rounded-xl hover:bg-[#5850EC]/5 transition-colors"
@@ -410,7 +364,11 @@ export default function TicketDetailPage() {
               </button>
             )}
 
-          <Link href={`/events/${ticketDetail.pricing.regime.id}`}>
+          <Link
+            href={`/events/view/${slugify(
+              ticketDetail.pricing.regime.name as string
+            )}`}
+          >
             <button className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 py-3 px-4 rounded-xl hover:bg-gray-50 transition-colors">
               <Ticket className="w-5 h-5" />
               <span>View Event</span>
@@ -446,131 +404,6 @@ export default function TicketDetailPage() {
           onClose={() => setShowTransferModal(false)}
         />
       )}
-    </div>
-  );
-}
-
-interface TransferModalProps {
-  ticket: ApiTicketDetail;
-  onClose: () => void;
-}
-
-function TransferModal({ ticket, onClose }: TransferModalProps) {
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [isTransferring, setIsTransferring] = useState(false);
-
-  const handleTransfer = async () => {
-    setIsTransferring(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsTransferring(false);
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">Transfer Ticket</h2>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Ticket Info */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold mb-1">{ticket.pricing.regime.name}</h3>
-            <p className="text-sm text-gray-600">
-              {formatDate(ticket.pricing.regime.start_date)} •{" "}
-              {ticket.pricing.regime.venue}
-            </p>
-            <p className="text-sm text-gray-600">
-              1 {ticket.pricing.name} ticket
-            </p>
-            <p className="text-sm font-medium text-[#5850EC] mt-1">
-              {ticket.id}
-            </p>
-          </div>
-
-          {/* Transfer Form */}
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Recipient Email*
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter recipient's email"
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
-                required
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="message"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Message (Optional)
-              </label>
-              <textarea
-                id="message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Add a personal message..."
-                rows={3}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
-              />
-            </div>
-
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800">
-                <strong>Important:</strong> Once transferred, you will no longer
-                have access to this ticket. The recipient will receive an email
-                with the ticket details and QR code.
-              </p>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 mt-6">
-            <button
-              onClick={onClose}
-              className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleTransfer}
-              disabled={!email || isTransferring}
-              className="flex-1 bg-[#5850EC] text-white py-3 rounded-lg hover:bg-[#6C63FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {isTransferring ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Transferring...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  <span>Transfer</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
