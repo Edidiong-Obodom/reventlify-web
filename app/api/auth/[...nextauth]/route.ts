@@ -1,5 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { headers } from "next/headers";
 
 const authOptions: NextAuthOptions = {
   providers: [
@@ -18,13 +19,24 @@ const authOptions: NextAuthOptions = {
           throw new Error("Missing email or password");
         }
 
+        const headersList = await headers(); // No `await` needed here
+        const forwarded = headersList.get("x-forwarded-for") || "";
+        const realClientIp = forwarded.split(",")[0].trim();
+
+        const headersInit: HeadersInit = {
+          "Content-Type": "application/json",
+          "x-real-client-ip": realClientIp,
+        };
+
+        if (process.env.INTERNAL_SHARED_SECRET) {
+          headersInit["x-internal-auth"] = process.env.INTERNAL_SHARED_SECRET;
+        }
+
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/v1/auth/login`,
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: headersInit,
             credentials: "include",
             body: JSON.stringify({
               email: credentials.email,
