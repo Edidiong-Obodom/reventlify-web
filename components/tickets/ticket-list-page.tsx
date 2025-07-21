@@ -282,12 +282,12 @@ export default function TicketListPage() {
 
       {/* Tickets List */}
       <main className="max-w-5xl mx-auto px-4 py-6">
-        {isLoading || isFetchingNextPage ? (
+        {isLoading ? (
           <div className="mt-6 space-y-4">
             {[1, 2, 3].map((i) => (
               <div
                 key={`loading-${i}`}
-                className="h-20 bg-white rounded-lg shadow-sm animate-pulse"
+                className="h-[12rem] bg-white rounded-xl shadow-sm animate-pulse"
               />
             ))}
           </div>
@@ -421,6 +421,17 @@ export default function TicketListPage() {
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+
+        {isFetchingNextPage && (
+          <div className="mt-6 space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={`loading-${i}`}
+                className="bg-white rounded-xl h-[12rem] shadow-sm animate-pulse"
+              />
             ))}
           </div>
         )}
