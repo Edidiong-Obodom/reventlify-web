@@ -7,6 +7,7 @@ import {
   TrendingDown,
 } from "lucide-react";
 import { ReactNode } from "react";
+import { formatPrice } from "../tickets";
 
 /** Checks if the transaction is from an affiliate */
 export const isAffiliate = (
@@ -89,7 +90,7 @@ export const formatDateTime = (dateString: string): string => {
 /** Formats amount with currency symbol */
 export const formatAmount = (amount: number, currency: string): string => {
   const symbol = currency.toLowerCase() === "ngn" ? "₦" : "$";
-  return `${symbol}${Number(amount).toFixed(2)}`;
+  return `${symbol}${formatPrice(Number(amount))}`;
 };
 
 /** Converts kebab-case action into human-readable label */
