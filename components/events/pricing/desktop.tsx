@@ -104,7 +104,7 @@ export default function PricingSidebar({
                 key={pricing.id}
                 className={`flex justify-between items-center p-3 rounded-lg cursor-pointer border w-full ${
                   selectedIndex === index
-                    ? "border-[#5850EC] bg-[#5850EC]/10"
+                    ? "bg-[#5850EC]/10"
                     : "border-gray-200"
                 }`}
                 onClick={() => handleSelectPricing(index)}
