@@ -8,9 +8,10 @@ export default function Broadcast() {
   const [isStreaming, setIsStreaming] = useState(false);
 
   const handleStart = async () => {
-    const socket = new WebSocket(
-      `${process.env.NEXT_PUBLIC_STREAMING_URL}`
-    );
+    const socket = new WebSocket(`${process.env.NEXT_PUBLIC_STREAMING_URL}`);
+
+    socket.onerror = (e) => console.error("❌ WebSocket error:", e);
+    socket.onopen = () => console.log("✅ WebSocket connected");
     socket.onopen = async () => {
       if (videoRef.current) {
         await startBroadcasting(socket, videoRef.current);
