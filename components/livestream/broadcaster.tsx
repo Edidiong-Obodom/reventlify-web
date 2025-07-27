@@ -3,7 +3,9 @@
 import { startBroadcasting, stopBroadcasting } from "@/lib/mediasoup/broadcast";
 import React, { useRef, useState } from "react";
 
-export default function Broadcast() {
+export default function Broadcast({
+  regimeId,
+}: Readonly<{ regimeId: string }>) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isStreaming, setIsStreaming] = useState(false);
 
@@ -14,7 +16,7 @@ export default function Broadcast() {
     socket.onopen = () => console.log("✅ WebSocket connected");
     socket.onopen = async () => {
       if (videoRef.current) {
-        await startBroadcasting(socket, videoRef.current);
+        await startBroadcasting(socket, regimeId, videoRef.current);
         setIsStreaming(true);
       }
     };

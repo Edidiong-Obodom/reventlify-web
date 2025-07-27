@@ -5,7 +5,10 @@ let consumerTransport: mediasoupClient.types.Transport;
 let consumer: mediasoupClient.types.Consumer;
 let ws: WebSocket;
 
-export async function startViewing(videoElement: HTMLVideoElement) {
+export async function startViewing(
+  videoElement: HTMLVideoElement,
+  regimeId: string
+) {
   ws = new WebSocket(`${process.env.NEXT_PUBLIC_STREAMING_URL}`);
 
   ws.onopen = async () => {
@@ -67,6 +70,7 @@ export async function startViewing(videoElement: HTMLVideoElement) {
         JSON.stringify({
           action: "consume",
           rtpCapabilities: device.rtpCapabilities,
+          producerId: regimeId,
         })
       );
     }
@@ -93,7 +97,7 @@ export async function startViewing(videoElement: HTMLVideoElement) {
         rtpParameters,
       });
 
-      console.log("🎬 Consumed from producer:", producerId);
+      console.log("🎬 Consumed from producer:", producerId, regimeId);
       console.log("📦 Consuming track of kind:", kind);
 
       const stream = new MediaStream();

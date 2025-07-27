@@ -13,7 +13,7 @@ export default async function HostPageWrapper() {
       <h2 className="text-xl font-bold mb-2">
         Hosting Live for Regime ID: {regimeId}
       </h2>
-      <Broadcast />
+      <Broadcast regimeId={regimeId as string} />
     </div>
   );
 }

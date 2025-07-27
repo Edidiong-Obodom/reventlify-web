@@ -8,6 +8,7 @@ let socketRef: WebSocket;
 
 export async function startBroadcasting(
   socket: WebSocket,
+  regimeId: string,
   videoElement?: HTMLVideoElement
 ) {
   const video = document.querySelector("video");
@@ -73,6 +74,7 @@ export async function startBroadcasting(
               transportId: sendTransport.id,
               kind,
               rtpParameters,
+              producerId: regimeId,
             })
           );
         }
@@ -134,6 +136,7 @@ export function stopBroadcasting() {
   if (sendTransport) {
     try {
       sendTransport.close();
+      console.log("🛑 Broadcast stopped!");
     } catch (err) {
       console.warn("Failed to close sendTransport:", err);
     }

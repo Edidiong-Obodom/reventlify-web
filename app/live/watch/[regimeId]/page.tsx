@@ -12,7 +12,11 @@ export default function WatchPage() {
     const video = videoRef.current;
     if (!video) return;
 
+    console.log("video.paused: ", video?.paused);
+
     video.onplaying = () => {
+      console.log("video.paused: ", video?.paused);
+      console.log("video.muted: ", video?.muted);
       console.log("🎥 Viewer video is playing");
     };
     video.onloadedmetadata = () => {
@@ -25,7 +29,7 @@ export default function WatchPage() {
 
   useEffect(() => {
     if (videoRef.current) {
-      startViewing(videoRef.current);
+      startViewing(videoRef.current, regimeId);
     }
 
     return () => {
