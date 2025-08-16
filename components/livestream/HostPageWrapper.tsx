@@ -3,7 +3,7 @@
 import Broadcast from "@/components/livestream/broadcaster";
 import { notFound, useParams } from "next/navigation";
 
-export default async function HostPageWrapper() {
+export default function HostPageWrapper() {
   const { regimeId } = useParams();
 
   if (!regimeId) return notFound(); // optional
