@@ -256,7 +256,10 @@ export default function WatchPage() {
   };
 
   const handleManualPlay = async () => {
+    console.log("I clicked");
+
     if (!videoRef.current) return;
+    console.log("It proceeded");
 
     try {
       await videoRef.current.play();

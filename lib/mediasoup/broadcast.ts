@@ -29,7 +29,10 @@ let reconnectAttempts = 0;
 let maxReconnectAttempts = 5;
 
 // Health monitoring
-let healthMonitorInterval: NodeJS.Timeout | null = null;
+let healthMonitorInterval: ReturnType<typeof setInterval> | null = null;
+
+// --- NEW: FIFO queue for produce callbacks to avoid race conditions ---
+const pendingProduceCallbacks: Array<(data: { id: string }) => void> = [];
 
 const monitorProducerHealth = () => {
   if (healthMonitorInterval) {
@@ -43,6 +46,7 @@ const monitorProducerHealth = () => {
     producers.forEach((producerInfo, kind) => {
       const { producer, track } = producerInfo;
       const isHealthy =
+        producer !== undefined &&
         !producer.closed &&
         !producer.paused &&
         track.readyState === "live" &&
@@ -81,7 +85,7 @@ const recreateProducer = async (kind: string) => {
 
     const track = tracks[0];
 
-    // Create new producer
+    // Create new producer - produce() will trigger sendTransport.on('produce') which pushes callback to queue
     const newProducer = await sendTransport.produce({
       track,
       appData: { regimeId: currentRegimeId, kind },
@@ -136,8 +140,12 @@ const setupProducerEventListeners = (
 
   track.addEventListener("ended", () => {
     console.warn(`🛑 ${kind} track ended`);
-    if (producer && !producer.closed) {
-      producer.close();
+    try {
+      if (producer && !producer.closed) {
+        producer.close();
+      }
+    } catch (err) {
+      /* ignore */
     }
     producers.delete(kind);
   });
@@ -158,7 +166,7 @@ export async function startBroadcasting(
     broadcastState = "connecting";
     reconnectAttempts = 0;
 
-    // Setup WebSocket event handlers
+    // Attach a single onmessage handler which will also resolve produce callbacks
     socket.onmessage = async (event) => {
       try {
         const msg = JSON.parse(event.data);
@@ -230,6 +238,24 @@ const handleWebSocketMessage = async (
   msg: any,
   videoElement?: HTMLVideoElement
 ) => {
+  // --- FIRST: handle produceResult queue if present ---
+  if (msg.action === "produceResult") {
+    try {
+      const { id } = msg.data || {};
+      const callback = pendingProduceCallbacks.shift();
+      if (callback) {
+        callback({ id });
+      } else {
+        console.warn("⚠️ Received produceResult but no pending callback", id);
+      }
+    } catch (err) {
+      console.error("❌ Error resolving produceResult:", err);
+    }
+    // produceResult handled; still allow fallthrough to other handlers if needed but usually it's specific
+    return;
+  }
+
+  // --- Regular handlers ---
   if (msg.action === "routerRtpCapabilities") {
     try {
       device = new mediasoupClient.Device();
@@ -244,6 +270,7 @@ const handleWebSocketMessage = async (
       console.error("❌ Failed to load device:", error);
       broadcastState = "error";
     }
+    return;
   }
 
   if (msg.action === "createWebRtcTransportResult") {
@@ -253,16 +280,22 @@ const handleWebSocketMessage = async (
       console.error("❌ Failed to setup send transport:", error);
       broadcastState = "error";
     }
+    return;
   }
 
   if (msg.action === "producerTransportConnected") {
     console.log("✅ Producer transport connected successfully");
+    return;
   }
 
   if (msg.action === "error") {
     console.error("❌ Server error:", msg.message);
     broadcastState = "error";
+    return;
   }
+
+  // Unknown message - log for visibility
+  console.log("📨 Unhandled message action (broadcast):", msg.action);
 };
 
 const setupSendTransport = async (
@@ -308,29 +341,14 @@ const setupSendTransport = async (
     }
   });
 
+  // IMPORTANT: use FIFO queue for produce callbacks to avoid multiple message listener races
   sendTransport.on(
     "produce",
     ({ kind, rtpParameters, appData }, callback, errback) => {
       console.log(`📡 Producing ${kind} track for regime:`, currentRegimeId);
 
-      const listener = (event: MessageEvent) => {
-        try {
-          const response = JSON.parse(event.data);
-          if (response.action === "produceResult") {
-            socketRef.removeEventListener("message", listener);
-            console.log(
-              `✅ ${kind} producer created with ID:`,
-              response.data.id
-            );
-            callback({ id: response.data.id });
-          }
-        } catch (error: any) {
-          console.error("❌ Error handling produce result:", error);
-          errback(error);
-        }
-      };
-
-      socketRef.addEventListener("message", listener);
+      // Push callback into queue. When server returns produceResult, the top callback will be called.
+      pendingProduceCallbacks.push(callback);
 
       try {
         socketRef.send(
@@ -343,8 +361,15 @@ const setupSendTransport = async (
           })
         );
       } catch (error: any) {
-        socketRef.removeEventListener("message", listener);
-        errback(error);
+        // If send fails, remove our callback and call errback
+        const cb = pendingProduceCallbacks.pop();
+        if (cb) {
+          try {
+            errback(error);
+          } catch (e) {
+            /* ignore */
+          }
+        }
       }
     }
   );
@@ -397,7 +422,7 @@ const setupMediaCapture = async (videoElement?: HTMLVideoElement) => {
       console.log("📺 Stream attached to video element");
     }
 
-    // Create producers for each track
+    // Create producers for each track (sequential to keep FIFO mapping correct)
     await createProducers();
 
     // Start health monitoring
@@ -416,10 +441,19 @@ const setupMediaCapture = async (videoElement?: HTMLVideoElement) => {
 };
 
 const createProducers = async () => {
-  for (const track of stream.getTracks()) {
+  // create producers in a deterministic order: video first, audio second
+  const tracks = stream.getTracks();
+  const sorted = [...tracks].sort((a, b) => {
+    if (a.kind === "video" && b.kind !== "video") return -1;
+    if (b.kind === "video" && a.kind !== "video") return 1;
+    return 0;
+  });
+
+  for (const track of sorted) {
     try {
       console.log(`🎛️ Creating producer for ${track.kind} track...`);
 
+      // produce() will not resolve until the sendTransport.on('produce') callback is called
       const producer = await sendTransport.produce({
         track,
         appData: { regimeId: currentRegimeId, kind: track.kind },
@@ -457,7 +491,6 @@ const setupVisibilityHandling = () => {
     console.log(`🔄 Tab ${document.hidden ? "hidden" : "visible"}`);
 
     // Simple approach: just ensure tracks stay enabled
-    // Let the server handle any optimization
     stream.getTracks().forEach((track) => {
       track.enabled = true;
     });
@@ -517,6 +550,17 @@ export function stopBroadcasting() {
     }
   });
   producers.clear();
+
+  // Clear any pending produce callbacks (safely)
+  while (pendingProduceCallbacks.length) {
+    const cb = pendingProduceCallbacks.shift();
+    try {
+      // inform callback with a dummy id (or could call errback if we kept one)
+      if (cb) cb({ id: "" });
+    } catch (e) {
+      /* ignore */
+    }
+  }
 
   // Close transport
   if (sendTransport) {
@@ -585,7 +629,7 @@ export function getBroadcastState() {
     regimeId: currentRegimeId,
     producers: Array.from(producers.keys()),
     producerDetails: producerStates,
-    transportState: sendTransport?.connectionState || "disconnected",
+    transportState: (sendTransport as any)?.connectionState || "disconnected",
     deviceLoaded: !!device,
     reconnectAttempts,
     hasStream: !!stream,

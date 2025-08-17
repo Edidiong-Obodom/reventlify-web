@@ -10,6 +10,15 @@ let currentRegimeId: string = "";
 // Track what kinds we've successfully consumed
 let consumedKinds = new Set<string>();
 
+// 🛠 enhancement: also track in-flight requests so we don't double-consume on duplicates
+let requestedKinds = new Set<string>();
+
+// 🛠 enhancement: guard re-entrant startViewing (React StrictMode, double mounts)
+let startInProgress = false;
+
+// 🛠 enhancement: make sure we only request consumers after a single successful transport setup
+let consumersRequested = false;
+
 // Connection state management
 type ConnectionState =
   | "idle"
@@ -61,35 +70,71 @@ export async function startViewing(
   videoElement: HTMLVideoElement,
   regimeId: string
 ) {
+  // 🛠 enhancement: if a session is already starting/connected for same regime, ignore duplicate call
+  if (
+    startInProgress ||
+    (ws &&
+      (ws.readyState === WebSocket.OPEN ||
+        ws.readyState === WebSocket.CONNECTING)) ||
+    connectionState === "connecting" ||
+    connectionState === "connected"
+  ) {
+    console.warn(
+      "⚠️ startViewing called while a session is active/in-progress; ignoring duplicate"
+    );
+    return;
+  }
+
   // Reset state
   consumers.clear();
   consumedKinds.clear();
+  requestedKinds.clear();
   viewerStream = null;
   currentRegimeId = regimeId;
   connectionState = "connecting";
+  consumersRequested = false;
   retryManager.reset();
+  startInProgress = true; // 🛠 enhancement
 
   console.log("🎯 Starting viewer for regime:", regimeId);
 
   try {
+    // 🛠 enhancement: if a previous ws exists but not closed, close it first
+    if (ws && ws.readyState !== WebSocket.CLOSED) {
+      try {
+        ws.close(1000, "Re-initializing viewer");
+      } catch {}
+    }
+
     ws = new WebSocket(`${process.env.NEXT_PUBLIC_STREAMING_URL}`);
 
     ws.onopen = async () => {
       console.log("🔌 Connected to live server for regime:", regimeId);
       connectionState = "connected";
 
-      try {
-        // Step 1: Get Router RTP Capabilities
-        await sendMessage({ action: "getRouterRtpCapabilities" });
-      } catch (error) {
-        console.error("❌ Failed to get router capabilities:", error);
-        connectionState = "failed";
-      }
+      setTimeout(async () => {
+        try {
+          // Step 1: Get Router RTP Capabilities
+          await sendMessage({
+            action: "getRouterRtpCapabilities",
+            data: { regimeId }, // keep your addition
+          });
+        } catch (err) {
+          console.error("❌ Failed to get router capabilities:", err);
+          connectionState = "failed";
+          startInProgress = false; // 🛠 enhancement
+        }
+      }, 100); // small delay to avoid server race on dev reloads
     };
 
     ws.onmessage = async (event) => {
       try {
         const msg = JSON.parse(event.data);
+        // 🛠 enhancement: ignore messages if connection isn’t the active one
+        if (connectionState === "closed" || connectionState === "failed")
+          return;
+
+        // Helpful for debugging duplicates
         console.log("📨 Received message:", msg.action);
         await handleWebSocketMessage(msg, videoElement);
       } catch (error) {
@@ -100,11 +145,13 @@ export async function startViewing(
     ws.onerror = (err) => {
       console.error("❌ Viewer socket error:", err);
       connectionState = "failed";
+      startInProgress = false; // 🛠 enhancement
     };
 
     ws.onclose = (event) => {
       console.log("🔌 WebSocket connection closed", event.code, event.reason);
       connectionState = "closed";
+      startInProgress = false; // 🛠 enhancement
 
       // Auto-reconnect for unexpected closures (not manual close)
       if (event.code !== 1000 && currentRegimeId) {
@@ -119,6 +166,7 @@ export async function startViewing(
   } catch (error) {
     console.error("❌ Failed to create WebSocket:", error);
     connectionState = "failed";
+    startInProgress = false; // 🛠 enhancement
     throw error;
   }
 }
@@ -126,7 +174,7 @@ export async function startViewing(
 // Helper function to send messages with promise support
 function sendMessage(message: any): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (ws.readyState !== WebSocket.OPEN) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
       reject(new Error("WebSocket is not open"));
       return;
     }
@@ -147,67 +195,106 @@ async function handleWebSocketMessage(
   if (msg.action === "routerRtpCapabilities") {
     try {
       // Step 2: Load Device with capabilities
-      device = new mediasoupClient.Device();
-      await device.load({ routerRtpCapabilities: msg.data });
-      console.log("📱 Device loaded with RTP capabilities");
+      // 🛠 enhancement: guard duplicate device.load
+      if (!device) device = new mediasoupClient.Device();
+      if ((device as any)._loaded !== true) {
+        await device.load({ routerRtpCapabilities: msg.data });
+        console.log("📱 Device loaded with RTP capabilities");
+      } else {
+        console.log("ℹ️ Device already loaded, skipping");
+      }
 
-      // Step 3: Create WebRTC Transport
+      // Step 3: Create WebRTC Transport (consumer)
       await sendMessage({ action: "createWebRtcTransport", role: "consumer" });
     } catch (error) {
       console.error("❌ Failed to load device:", error);
       connectionState = "failed";
+      startInProgress = false; // 🛠 enhancement
     }
+    return;
   }
 
   if (msg.action === "createWebRtcTransportResult") {
     try {
       const { id, iceParameters, iceCandidates, dtlsParameters } = msg.data;
 
-      consumerTransport = device.createRecvTransport({
-        id,
-        iceParameters,
-        iceCandidates,
-        dtlsParameters,
-      });
+      // 🛠 enhancement: ignore duplicate transport creation
+      if (consumerTransport && !consumerTransport.closed) {
+        console.warn(
+          "⚠️ Consumer transport already exists, ignoring duplicate create result"
+        );
+      } else {
+        consumerTransport = device.createRecvTransport({
+          id,
+          iceParameters,
+          iceCandidates,
+          dtlsParameters,
+        });
 
-      // Enhanced transport event handling
-      consumerTransport.on(
-        "connect",
-        ({ dtlsParameters }, callback, errback) => {
-          console.log("🔗 Consumer transport connecting...");
-          sendMessage({
-            action: "connectConsumerTransport",
-            dtlsParameters,
-          })
-            .then(() => {
-              callback();
+        // Enhanced transport event handling
+        consumerTransport.on(
+          "connect",
+          ({ dtlsParameters }, callback, errback) => {
+            console.log("🔗 Consumer transport connecting...");
+            sendMessage({
+              action: "connectConsumerTransport",
+              dtlsParameters,
             })
-            .catch((error) => {
-              console.error("❌ Failed to connect consumer transport:", error);
-              errback(error);
-            });
-        }
-      );
+              .then(() => {
+                callback();
+              })
+              .catch((error) => {
+                console.error(
+                  "❌ Failed to connect consumer transport:",
+                  error
+                );
+                errback(error);
+              });
+          }
+        );
 
-      consumerTransport.on("connectionstatechange", (state) => {
-        console.log("🔄 Consumer Transport State:", state);
-        if (state === "connected") {
-          console.log("🟢 Consumer transport connected - requesting consumers");
-          // Only request consumers when transport is fully connected
-          requestConsumers();
-        } else if (state === "failed") {
-          console.warn("🔴 Consumer transport failed");
-          connectionState = "failed";
-        } else if (state === "disconnected") {
-          console.warn("🟡 Consumer transport disconnected");
-        }
-      });
+        // after setting consumerTransport and registering its event handlers
+        console.log("📡 Consumer transport created successfully");
 
-      console.log("📡 Consumer transport created successfully");
+        // ✅ NEW: do not wait for 'connected' to request consumers
+        if (!consumersRequested) {
+          consumersRequested = true;
+          console.log(
+            "🟢 Requesting consumers immediately after transport creation"
+          );
+          requestConsumers().catch((err) =>
+            console.error("❌ Immediate consumer request failed:", err)
+          );
+        }
+
+        consumerTransport.on("connectionstatechange", (state) => {
+          console.log("🔄 Consumer Transport State:", state);
+          if (state === "connected") {
+            // 🛠 enhancement: only request once
+            if (!consumersRequested) {
+              consumersRequested = true;
+              console.log(
+                "🟢 Consumer transport connected - requesting consumers"
+              );
+              requestConsumers();
+            }
+          } else if (state === "failed") {
+            console.warn("🔴 Consumer transport failed");
+            connectionState = "failed";
+            startInProgress = false; // 🛠 enhancement
+          } else if (state === "disconnected") {
+            console.warn("🟡 Consumer transport disconnected");
+          }
+        });
+
+        console.log("📡 Consumer transport created successfully");
+      }
     } catch (error) {
       console.error("❌ Failed to create consumer transport:", error);
       connectionState = "failed";
+      startInProgress = false; // 🛠 enhancement
     }
+    return;
   }
 
   if (msg.action === "error") {
@@ -215,8 +302,12 @@ async function handleWebSocketMessage(
 
     // Handle specific error cases with retry logic
     if (msg.message && msg.message.includes("producer found")) {
+      // server message like "No producer found" or "No healthy video producer found"
       const kind = msg.kind || "unknown";
       console.warn(`🔄 No ${kind} producer found, will retry...`);
+
+      // 🛠 enhancement: allow future retries for this kind
+      requestedKinds.delete(kind);
 
       // Use retry manager for producer requests
       setTimeout(() => {
@@ -235,6 +326,7 @@ async function handleWebSocketMessage(
     } else {
       console.error("❌ Unhandled server error:", msg);
     }
+    return;
   }
 
   if (msg.action === "consumeResult") {
@@ -243,14 +335,18 @@ async function handleWebSocketMessage(
     } catch (error) {
       console.error("❌ Failed to handle consume result:", error);
     }
+    return;
   }
+
+  // Unknown message - log
+  console.log("📨 Unhandled message action (viewer):", msg.action);
 }
 
 async function requestConsumers() {
   const kinds = ["video", "audio"]; // Prioritize video first
 
   for (const kind of kinds) {
-    if (!consumedKinds.has(kind)) {
+    if (!consumedKinds.has(kind) && !requestedKinds.has(kind)) {
       try {
         await requestSpecificConsumer(kind);
         // Small delay between requests to avoid overwhelming server
@@ -266,6 +362,13 @@ async function requestConsumers() {
 
 async function requestSpecificConsumer(kind: string): Promise<void> {
   console.log(`📡 Requesting ${kind} consumer for regime:`, currentRegimeId);
+
+  // 🛠 enhancement: dedupe in-flight requests
+  if (requestedKinds.has(kind)) {
+    console.log(`ℹ️ ${kind} consumer request already in-flight, skipping`);
+    return;
+  }
+  requestedKinds.add(kind);
 
   const message = {
     action: "consume",
@@ -290,6 +393,7 @@ async function handleConsumeResult(data: any, videoElement: HTMLVideoElement) {
 
     consumers.set(id, consumer);
     consumedKinds.add(kind);
+    requestedKinds.delete(kind); // 🛠 enhancement: clear in-flight marker
 
     console.log(`🎬 ${kind} consumer created:`, {
       consumerId: id,
@@ -312,6 +416,14 @@ async function handleConsumeResult(data: any, videoElement: HTMLVideoElement) {
       console.log("📺 Created new MediaStream for video element");
     }
 
+    // If we already have a track of this kind, replace it (keeps stream stable)
+    const existing = viewerStream.getTracks().find((t) => t.kind === kind);
+    if (existing) {
+      viewerStream.removeTrack(existing);
+      existing.stop();
+      console.log(`♻️ Replaced existing ${kind} track`);
+    }
+
     // Add track to stream
     viewerStream.addTrack(consumer.track);
     console.log(
@@ -330,12 +442,12 @@ async function handleConsumeResult(data: any, videoElement: HTMLVideoElement) {
 
     consumer.track.addEventListener("ended", () => {
       console.warn(`🛑 ${kind} track ended`);
-      // Remove track from stream
       if (viewerStream?.getTrackById(consumer.track.id)) {
         viewerStream.removeTrack(consumer.track);
       }
       consumers.delete(id);
       consumedKinds.delete(kind);
+      requestedKinds.delete(kind);
     });
 
     // Enhanced consumer event listeners
@@ -343,8 +455,8 @@ async function handleConsumeResult(data: any, videoElement: HTMLVideoElement) {
       console.log(`🗑️ ${kind} consumer closed`);
       consumers.delete(id);
       consumedKinds.delete(kind);
+      requestedKinds.delete(kind);
 
-      // Remove track from stream if it exists
       if (viewerStream?.getTrackById(consumer.track.id)) {
         viewerStream.removeTrack(consumer.track);
       }
@@ -374,6 +486,8 @@ async function handleConsumeResult(data: any, videoElement: HTMLVideoElement) {
     }
   } catch (error) {
     console.error(`❌ Failed to create ${kind} consumer:`, error);
+    // allow re-trying this kind
+    requestedKinds.delete(kind);
     throw error;
   }
 }
@@ -419,6 +533,11 @@ async function setupVideoPlayback(videoElement: HTMLVideoElement) {
   videoElement.addEventListener("waiting", handleWaiting);
   videoElement.addEventListener("canplay", handleCanPlay);
 
+  // ✅ NEW: ensure autoplay works in modern browsers
+  videoElement.muted = true;
+  videoElement.playsInline = true;
+  videoElement.setAttribute("playsinline", ""); // defensive
+
   // Attempt to play video
   try {
     await videoElement.play();
@@ -437,6 +556,7 @@ export function stopViewing() {
   console.log("🛑 Stopping viewer");
 
   connectionState = "closed";
+  startInProgress = false; // 🛠 enhancement
 
   // Close all consumers
   consumers.forEach((consumer, id) => {
@@ -451,6 +571,8 @@ export function stopViewing() {
   });
   consumers.clear();
   consumedKinds.clear();
+  requestedKinds.clear(); // 🛠 enhancement
+  consumersRequested = false; // 🛠 enhancement
 
   // Close transport
   if (consumerTransport) {
@@ -465,9 +587,14 @@ export function stopViewing() {
   }
 
   // Close WebSocket
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.close(1000, "Manual stop");
-    console.log("🔌 WebSocket closed");
+  if (
+    ws &&
+    (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)
+  ) {
+    try {
+      ws.close(1000, "Manual stop");
+      console.log("🔌 WebSocket closed");
+    } catch (e) {}
   }
 
   // Clear stream
