@@ -213,86 +213,124 @@ async function handleWebSocketMessage(
     }
     return;
   }
+  if (msg.action === "consumerTransportConnected") {
+    console.log("✅ Server acknowledged consumer transport DTLS connection");
+    // If not requested already, start requesting consumers
+    if (!consumersRequested) {
+      consumersRequested = true;
+      requestConsumers().catch((err) =>
+        console.error("❌ Request consumers after server ack failed:", err)
+      );
+    }
+    return;
+  }
+
+  // Replace your createWebRtcTransportResult handler with this:
 
   if (msg.action === "createWebRtcTransportResult") {
     try {
       const { id, iceParameters, iceCandidates, dtlsParameters } = msg.data;
 
-      // 🛠 enhancement: ignore duplicate transport creation
       if (consumerTransport && !consumerTransport.closed) {
         console.warn(
           "⚠️ Consumer transport already exists, ignoring duplicate create result"
         );
-      } else {
-        consumerTransport = device.createRecvTransport({
-          id,
-          iceParameters,
-          iceCandidates,
-          dtlsParameters,
-        });
+        return;
+      }
 
-        // Enhanced transport event handling
-        consumerTransport.on(
-          "connect",
-          ({ dtlsParameters }, callback, errback) => {
-            console.log("🔗 Consumer transport connecting...");
-            sendMessage({
-              action: "connectConsumerTransport",
-              dtlsParameters,
+      consumerTransport = device.createRecvTransport({
+        id,
+        iceParameters,
+        iceCandidates,
+        dtlsParameters,
+      });
+
+      console.log("📡 Consumer transport created with ID:", id);
+      console.log(
+        "🔧 Initial transport state:",
+        consumerTransport.connectionState
+      );
+
+      // Enhanced transport event handling
+      consumerTransport.on(
+        "connect",
+        ({ dtlsParameters }, callback, errback) => {
+          console.log("🔗 Consumer transport DTLS connecting...");
+          console.log("🔧 DTLS parameters received for connection");
+
+          sendMessage({
+            action: "connectConsumerTransport",
+            dtlsParameters,
+          })
+            .then(() => {
+              console.log(
+                "✅ Server connectConsumerTransport message sent successfully"
+              );
+              callback(); // This tells MediaSoup the connection succeeded
             })
-              .then(() => {
-                callback();
-              })
-              .catch((error) => {
-                console.error(
-                  "❌ Failed to connect consumer transport:",
-                  error
-                );
-                errback(error);
-              });
+            .catch((error) => {
+              console.error(
+                "❌ Failed to send connectConsumerTransport to server:",
+                error
+              );
+              errback(error);
+            });
+        }
+      );
+
+      // Enhanced state change logging
+      consumerTransport.on("connectionstatechange", (state) => {
+        console.log(`🔄 Consumer Transport State: ${state}`);
+
+        if (state === "connected") {
+          if (!consumersRequested) {
+            consumersRequested = true;
+            console.log(
+              "🟢 Consumer transport connected - requesting consumers NOW"
+            );
+            requestConsumers().catch((err) => {
+              console.error("❌ Failed to request consumers:", err);
+            });
+          } else {
+            console.log("ℹ️ Consumers already requested, skipping");
           }
+        } else if (state === "failed") {
+          console.warn("🔴 Consumer transport failed");
+          connectionState = "failed";
+          startInProgress = false;
+        }
+      });
+
+      // Add additional transport event logging (client-side events only)
+      consumerTransport.on("icegatheringstatechange", (state) => {
+        console.log(`🧊 ICE gathering state changed to: ${state}`);
+      });
+
+      consumerTransport.on("icecandidateerror", (event) => {
+        console.error(`❌ ICE candidate error:`, event);
+      });
+
+      console.log("📡 Consumer transport created successfully");
+
+      // ✅ KEY FIX: Immediately request consumers after transport creation
+      // This will trigger the transport's connect event
+      if (!consumersRequested) {
+        consumersRequested = true;
+        console.log(
+          "🚀 Immediately requesting consumers to trigger transport connection"
         );
 
-        // after setting consumerTransport and registering its event handlers
-        console.log("📡 Consumer transport created successfully");
-
-        // ✅ NEW: do not wait for 'connected' to request consumers
-        if (!consumersRequested) {
-          consumersRequested = true;
-          console.log(
-            "🟢 Requesting consumers immediately after transport creation"
-          );
-          requestConsumers().catch((err) =>
-            console.error("❌ Immediate consumer request failed:", err)
-          );
-        }
-
-        consumerTransport.on("connectionstatechange", (state) => {
-          console.log("🔄 Consumer Transport State:", state);
-          if (state === "connected") {
-            // 🛠 enhancement: only request once
-            if (!consumersRequested) {
-              consumersRequested = true;
-              console.log(
-                "🟢 Consumer transport connected - requesting consumers"
-              );
-              requestConsumers();
-            }
-          } else if (state === "failed") {
-            console.warn("🔴 Consumer transport failed");
-            connectionState = "failed";
-            startInProgress = false; // 🛠 enhancement
-          } else if (state === "disconnected") {
-            console.warn("🟡 Consumer transport disconnected");
-          }
-        });
-
-        console.log("📡 Consumer transport created successfully");
+        // Small delay to ensure transport is fully set up
+        setTimeout(() => {
+          requestConsumers().catch((err) => {
+            console.error("❌ Failed to immediately request consumers:", err);
+          });
+        }, 100);
       }
     } catch (error) {
       console.error("❌ Failed to create consumer transport:", error);
       connectionState = "failed";
-      startInProgress = false; // 🛠 enhancement
+      startInProgress = false;
     }
     return;
   }
@@ -408,6 +446,17 @@ async function handleConsumeResult(data: any, videoElement: HTMLVideoElement) {
         settings: consumer.track.getSettings(),
       },
     });
+
+    // quick consumer stats to confirm bytes are flowing
+    try {
+      await consumer
+        .getStats()
+        .then((stats) =>
+          console.log("📈 consumer.getStats:", JSON.stringify(stats))
+        );
+    } catch (e) {
+      console.warn("⚠️ consumer.getStats error", e);
+    }
 
     // Create or get the viewer stream
     if (!viewerStream) {
