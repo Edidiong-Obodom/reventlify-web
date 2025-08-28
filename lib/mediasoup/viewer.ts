@@ -473,16 +473,46 @@ async function handleConsumeResult(data: any, videoElement: HTMLVideoElement) {
       console.log(`♻️ Replaced existing ${kind} track`);
     }
 
+    // Ensure track is enabled and unmuted before adding to stream
+    consumer.track.enabled = true;
+    
+    // For video tracks, we need to check if it's truly muted and try to unmute
+    if (kind === "video" && consumer.track.muted) {
+      console.warn("⚠️ Video track is muted, this might affect display");
+    }
+    
     // Add track to stream
     viewerStream.addTrack(consumer.track);
     console.log(
       `➕ Added ${kind} track to stream. Total tracks:`,
       viewerStream.getTracks().length
     );
+    console.log(`🎛️ Track ${kind} state:`, {
+      enabled: consumer.track.enabled,
+      muted: consumer.track.muted,
+      readyState: consumer.track.readyState
+    });
 
-    // Enhanced track event listeners
+    // Enhanced track event listeners with recovery
     consumer.track.addEventListener("mute", () => {
       console.warn(`🔇 ${kind} track muted`);
+      
+      // For video tracks, this is critical - try to recover
+      if (kind === "video") {
+        console.error("❌ CRITICAL: Video track muted - attempting recovery");
+        
+        // Try to resume the consumer
+        setTimeout(async () => {
+          try {
+            if (consumer && !consumer.closed && consumer.paused) {
+              await consumer.resume();
+              console.log("🔄 Resumed muted video consumer");
+            }
+          } catch (err) {
+            console.error("❌ Failed to resume muted video consumer:", err);
+          }
+        }, 1000);
+      }
     });
 
     consumer.track.addEventListener("unmute", () => {
@@ -586,6 +616,9 @@ async function setupVideoPlayback(videoElement: HTMLVideoElement) {
   videoElement.muted = true;
   videoElement.playsInline = true;
   videoElement.setAttribute("playsinline", ""); // defensive
+  videoElement.setAttribute("webkit-playsinline", ""); // iOS Safari
+  videoElement.controls = false; // Remove controls for autoplay
+  videoElement.preload = "none"; // Don't preload for live streams
 
   // Attempt to play video
   try {

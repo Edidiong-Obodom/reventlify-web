@@ -241,7 +241,22 @@ export default function WatchPage() {
     if (!videoRef.current) return;
 
     try {
+      // First ensure all tracks are enabled
+      const stream = videoRef.current.srcObject as MediaStream;
+      if (stream) {
+        stream.getAudioTracks().forEach(track => {
+          track.enabled = true;
+          console.log("🔊 Enabled audio track:", track.id);
+        });
+        stream.getVideoTracks().forEach(track => {
+          track.enabled = true;
+          console.log("📹 Enabled video track:", track.id);
+        });
+      }
+
+      // Then unmute the video element and play
       videoRef.current.muted = false;
+      videoRef.current.volume = 1.0; // Ensure volume is at max
       await videoRef.current.play();
       console.log("🔊 Video unmuted and playing");
       setError(null);
@@ -262,6 +277,16 @@ export default function WatchPage() {
     console.log("It proceeded");
 
     try {
+      // Ensure tracks are enabled before playing
+      const stream = videoRef.current.srcObject as MediaStream;
+      if (stream) {
+        stream.getTracks().forEach(track => {
+          track.enabled = true;
+          console.log(`✅ Enabled ${track.kind} track:`, track.id);
+        });
+      }
+
+      videoRef.current.volume = 1.0; // Ensure volume is set
       await videoRef.current.play();
       console.log("▶️ Manual play successful");
       setError(null);
@@ -500,6 +525,54 @@ export default function WatchPage() {
             onClick={handleRefresh}
           >
             🔄 Refresh
+          </button>
+
+          <button
+            className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded transition-colors flex items-center gap-2"
+            onClick={() => {
+              const stream = videoRef.current?.srcObject as MediaStream;
+              if (stream) {
+                stream.getTracks().forEach(track => {
+                  console.log(`🔍 ${track.kind} track:`, {
+                    id: track.id,
+                    enabled: track.enabled,
+                    muted: track.muted,
+                    readyState: track.readyState
+                  });
+                });
+                console.log("🎛️ Video element:", {
+                  muted: videoRef.current?.muted,
+                  volume: videoRef.current?.volume,
+                  paused: videoRef.current?.paused
+                });
+              }
+            }}
+          >
+            🔍 Debug Tracks
+          </button>
+
+          <button
+            className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded transition-colors flex items-center gap-2"
+            onClick={() => {
+              const stream = videoRef.current?.srcObject as MediaStream;
+              if (stream) {
+                // Force enable all tracks
+                stream.getTracks().forEach(track => {
+                  track.enabled = true;
+                  console.log(`🔧 Force enabled ${track.kind} track:`, track.id);
+                });
+                
+                // Try recreating the stream object
+                const newStream = new MediaStream(stream.getTracks());
+                if (videoRef.current) {
+                  videoRef.current.srcObject = newStream;
+                  videoRef.current.play().catch(console.error);
+                }
+                console.log("🔄 Recreated stream with enabled tracks");
+              }
+            }}
+          >
+            🔧 Force Fix
           </button>
         </div>
 

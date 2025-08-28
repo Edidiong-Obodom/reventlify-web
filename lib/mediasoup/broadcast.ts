@@ -408,12 +408,18 @@ const setupMediaCapture = async (videoElement?: HTMLVideoElement) => {
       track.enabled = true;
 
       // Log track details
-      console.log(`Track (${track.kind}):`, {
+      console.log(`🎙️ Broadcaster track (${track.kind}):`, {
         enabled: track.enabled,
         muted: track.muted,
         readyState: track.readyState,
         settings: track.getSettings(),
       });
+
+      // Specifically check for muted video tracks on broadcaster
+      if (track.kind === "video" && track.muted) {
+        console.error("❌ CRITICAL: Video track is muted on broadcaster side!");
+        console.log("🔧 Video track constraints:", track.getConstraints());
+      }
     });
 
     // Attach to video element if provided
