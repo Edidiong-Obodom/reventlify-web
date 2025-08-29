@@ -341,6 +341,21 @@ const setupSendTransport = async (
     }
   });
 
+  // Add connection state monitoring
+  sendTransport.on("connectionstatechange", (connectionState) => {
+    console.log("🧊 Producer connection state:", connectionState);
+  });
+
+  // Add ICE gathering state monitoring  
+  sendTransport.on("icegatheringstatechange", (iceGatheringState) => {
+    console.log("🔍 Producer ICE gathering state:", iceGatheringState);
+  });
+
+  // Add ICE candidate error monitoring
+  sendTransport.on("icecandidateerror", (error) => {
+    console.log("❌ Producer ICE candidate error:", error);
+  });
+
   // IMPORTANT: use FIFO queue for produce callbacks to avoid multiple message listener races
   sendTransport.on(
     "produce",
