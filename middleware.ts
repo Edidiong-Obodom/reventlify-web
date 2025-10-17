@@ -54,3 +54,13 @@ export default async function middleware(req: NextRequest) {
 
   return NextResponse.next();
 }
+
+// ⬇️ This config ensures middleware only runs on relevant paths
+export const config = {
+  matcher: [
+    /*
+      Only apply middleware to pages, not API or static files
+    */
+    '/((?!api|_next|favicon.ico|.*\\.).*)',
+  ],
+}
