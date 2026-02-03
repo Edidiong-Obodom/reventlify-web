@@ -6,11 +6,18 @@ import { getPopularRegimes } from "@/lib/api/regimes";
 import Link from "next/link";
 import { FeaturedEventSkeleton } from "./featured-event-skeleton";
 import { Session } from "next-auth";
+import { getBookmarkIds } from "@/lib/api/bookmarks";
 
 export const FeaturedCarousel = ({ session }: { session: Session | null }) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ["popular-regimes", session?.accessToken],
     queryFn: () => getPopularRegimes(session?.accessToken as string, 1, 3),
+  });
+
+  const { data: bookmarkIds } = useQuery({
+    queryKey: ["bookmark-ids", session?.accessToken],
+    queryFn: () => getBookmarkIds(session?.accessToken as string),
+    enabled: !!session?.accessToken,
   });
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -79,7 +86,13 @@ export const FeaturedCarousel = ({ session }: { session: Session | null }) => {
       >
         {data?.data.map((event) => (
           <div key={event.id} className="min-w-full">
-            <FeaturedEvent event={event} />
+            <FeaturedEvent
+              event={event}
+              session={session}
+              isBookmarked={
+                bookmarkIds ? bookmarkIds.includes(String(event.id)) : false
+              }
+            />
           </div>
         ))}
       </div>

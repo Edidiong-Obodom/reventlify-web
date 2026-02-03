@@ -5,8 +5,28 @@ import moment from "moment";
 import { slugify } from "@/lib/helpers/formatEventDetail";
 import Link from "next/link";
 import { removeMarkdownSyntax } from "@/lib";
+import { Session } from "next-auth";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { useEffect, useState } from "react";
+import { bookmarkRegime, unbookmarkRegime } from "@/lib/api/bookmarks";
 
-export const FeaturedEvent = ({ event }: { event: Partial<Regime> }) => {
+export const FeaturedEvent = ({
+  event,
+  session,
+  isBookmarked: isBookmarkedProp,
+}: {
+  event: Partial<Regime>;
+  session?: Session | null;
+  isBookmarked?: boolean;
+}) => {
+  const router = useRouter();
+  const [isBookmarked, setIsBookmarked] = useState(Boolean(isBookmarkedProp));
+  const [isBookmarkLoading, setIsBookmarkLoading] = useState(false);
+
+  useEffect(() => {
+    setIsBookmarked(Boolean(isBookmarkedProp));
+  }, [isBookmarkedProp]);
   const handleDate = (start_date: string, end_date: string) => {
     if (start_date !== end_date) {
       return `${start_date?.trim().split("-")[2].slice(0, 2)}-${end_date
@@ -37,6 +57,33 @@ export const FeaturedEvent = ({ event }: { event: Partial<Regime> }) => {
         .catch((error) => console.error("Error sharing", error));
     } else {
       alert("Sharing is not supported in your browser.");
+    }
+  };
+
+  const handleBookmark = async () => {
+    if (!session?.accessToken) {
+      toast.error("Please sign in to bookmark events.");
+      router.push("/signin");
+      return;
+    }
+
+    if (!event.id) return;
+
+    try {
+      setIsBookmarkLoading(true);
+      if (isBookmarked) {
+        await unbookmarkRegime(session.accessToken, String(event.id));
+        setIsBookmarked(false);
+        toast.success("Removed from bookmarks.");
+      } else {
+        await bookmarkRegime(session.accessToken, String(event.id));
+        setIsBookmarked(true);
+        toast.success("Saved to bookmarks.");
+      }
+    } catch (error: any) {
+      toast.error(error?.message ?? "Bookmark update failed.");
+    } finally {
+      setIsBookmarkLoading(false);
     }
   };
 
@@ -77,8 +124,16 @@ export const FeaturedEvent = ({ event }: { event: Partial<Regime> }) => {
             >
               Get Tickets
             </Link>
-            <button className="bg-white/20 backdrop-blur p-3 rounded-lg hover:bg-white/30 transition-colors">
-              <Heart className="w-6 h-6" />
+            <button
+              onClick={handleBookmark}
+              disabled={isBookmarkLoading}
+              className="bg-white/20 backdrop-blur p-3 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-70"
+            >
+              <Heart
+                className={`w-6 h-6 ${
+                  isBookmarked ? "text-[#FF6B6B] fill-[#FF6B6B]" : ""
+                }`}
+              />
             </button>
             <button
               onClick={handleShare}

@@ -137,7 +137,7 @@ export default function OtherProfilePage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                {id !== session?.user.id && (
+                {profile?.id !== session?.user.id && (
                   <button
                     onClick={handleFollowToggle}
                     className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-colors ${
