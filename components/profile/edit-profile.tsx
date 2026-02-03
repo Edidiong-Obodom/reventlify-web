@@ -61,7 +61,7 @@ export default function EditProfilePage() {
     }
   }, [profile]);
 
-  const { mutateAsync, isLoading: isSaving } = useMutation({
+  const { mutateAsync, isPending: isSaving } = useMutation({
     mutationFn: (payload: {
       name?: string;
       bio?: string;
