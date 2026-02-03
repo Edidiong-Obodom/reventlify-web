@@ -2,12 +2,15 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Camera, X, Check } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { categories } from "@/lib/constants";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { getProfile, updateProfile } from "@/lib/api/profile";
+import toast from "react-hot-toast";
 
 interface Interest {
   id: string;
@@ -37,17 +40,35 @@ const allInterests = categories.map((category, i) => ({
 export default function EditProfilePage() {
   const { data: session } = useSession();
   const [name, setName] = useState("");
-  const [bio, setBio] = useState(
-    "Enjoy your favorite dishes and a lovely your friends and family and have a great time. Food from local food trucks will be available for purchase."
-  );
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([
-    "games",
-    "concert",
-    "music",
-    "art",
-    "movie",
-  ]);
+  const [bio, setBio] = useState("");
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile", session?.accessToken],
+    queryFn: () => getProfile(session?.accessToken as string),
+    enabled: !!session?.accessToken,
+  });
+
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name ?? "");
+      setBio(profile.bio ?? "");
+      setSelectedInterests(profile.interests ?? []);
+      setImagePreview(profile.photo ?? null);
+      setPhotoBase64(null);
+    }
+  }, [profile]);
+
+  const { mutateAsync, isLoading: isSaving } = useMutation({
+    mutationFn: (payload: {
+      name?: string;
+      bio?: string;
+      interests?: string[];
+      photoBase64?: string | null;
+    }) => updateProfile(session?.accessToken as string, payload),
+  });
 
   const toggleInterest = (id: string) => {
     if (selectedInterests.includes(id)) {
@@ -63,9 +84,33 @@ export default function EditProfilePage() {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setImagePreview(reader.result as string);
+      const result = reader.result as string;
+      setImagePreview(result);
+      setPhotoBase64(result);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleSave = async () => {
+    if (!session?.accessToken) {
+      return toast.error("Please sign in to update your profile.");
+    }
+    if (!name.trim()) {
+      return toast.error("Name cannot be empty.");
+    }
+
+    try {
+      await mutateAsync({
+        name: name.trim(),
+        bio,
+        interests: selectedInterests,
+        ...(photoBase64 !== null ? { photoBase64 } : {}),
+      });
+      toast.success("Profile updated.");
+      setPhotoBase64(null);
+    } catch (error: any) {
+      toast.error(error?.message ?? "Profile update failed.");
+    }
   };
 
   return (
@@ -83,7 +128,11 @@ export default function EditProfilePage() {
               </Link>
               <h1 className="text-xl font-bold">Edit Profile</h1>
             </div>
-            <button className="flex items-center gap-1 text-[#5850EC] font-medium">
+            <button
+              className="flex items-center gap-1 text-[#5850EC] font-medium"
+              onClick={handleSave}
+              disabled={isSaving}
+            >
               <Check className="w-5 h-5" />
               <span className="hidden md:inline">Save Changes</span>
             </button>
@@ -100,7 +149,6 @@ export default function EditProfilePage() {
               <Image
                 src={
                   imagePreview ||
-                  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" ||
                   "/placeholder.svg"
                 }
                 alt="Profile"
@@ -198,7 +246,7 @@ export default function EditProfilePage() {
             <input
               type="email"
               id="email"
-              value={`${session?.user?.email ?? "ashfak.sayem@example.com"}`}
+              value={`${profile?.email ?? session?.user?.email ?? ""}`}
               disabled
               className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-gray-50 text-gray-500"
             />
@@ -210,7 +258,11 @@ export default function EditProfilePage() {
 
         {/* Mobile Save Button */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
-          <button className="w-full bg-[#5850EC] text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#6C63FF] transition-colors">
+          <button
+            className="w-full bg-[#5850EC] text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#6C63FF] transition-colors"
+            onClick={handleSave}
+            disabled={isSaving}
+          >
             <Check className="w-5 h-5" />
             <span>Save Changes</span>
           </button>

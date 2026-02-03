@@ -15,6 +15,8 @@ import { SidebarItem } from "./sidebar-item";
 import { RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { Session } from "next-auth";
+import { useQuery } from "@tanstack/react-query";
+import { getProfile } from "@/lib/api/profile";
 
 const menuItems = [
   {
@@ -74,6 +76,15 @@ export const Sidebar = ({
   session,
 }: SidebarProps) => {
   const router = useRouter();
+  const { data: profile } = useQuery({
+    queryKey: ["profile", session?.accessToken],
+    queryFn: () => getProfile(session?.accessToken as string),
+    enabled: !!session?.accessToken,
+  });
+
+  const displayName =
+    profile?.name ?? session?.user?.firstName ?? "John Doe";
+  const profilePhoto = profile?.photo ?? "/placeholder-dp.jpg";
   return (
     <div
       ref={sidebarRef}
@@ -92,7 +103,7 @@ export const Sidebar = ({
         <div className="flex flex-col items-center">
           <div className="w-20 h-20 rounded-full overflow-hidden mb-4 ring-2 ring-offset-2 ring-[#5850EC]">
             <ImageFallback
-              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&auto=format&fit=crop&q=60&ixlib=rb-4.0.3"
+              src={profilePhoto}
               fallbackSrc="/placeholder-dp.jpg"
               alt="Profile"
               width={80}
@@ -105,7 +116,7 @@ export const Sidebar = ({
               !isMobile && !isMenuOpen ? "opacity-0" : "opacity-100"
             }`}
           >
-            {session?.user?.firstName ?? "John Doe"}
+            {displayName}
           </h2>
         </div>
       </div>

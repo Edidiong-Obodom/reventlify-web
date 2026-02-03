@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Edit, ChevronDown, Pencil, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
+import { getProfile } from "@/lib/api/profile";
+import { categories } from "@/lib/constants";
 
 interface Interest {
   id: string;
@@ -13,36 +16,52 @@ interface Interest {
   color: string;
 }
 
-const interests: Interest[] = [
-  { id: "games", name: "Games Online", color: "bg-[#5850EC]" },
-  { id: "concert", name: "Concert", color: "bg-[#E25C4B]" },
-  { id: "music", name: "Music", color: "bg-[#F4A261]" },
-  { id: "art", name: "Art", color: "bg-[#7B68EE]" },
-  { id: "movie", name: "Movie", color: "bg-[#4ECDC4]" },
-  { id: "others", name: "Others", color: "bg-[#6FDFDF]" },
+const interestColors = [
+  "bg-[#5850EC]",
+  "bg-[#E25C4B]",
+  "bg-[#F4A261]",
+  "bg-[#7B68EE]",
+  "bg-[#4ECDC4]",
+  "bg-[#6FDFDF]",
+  "bg-[#FF6B6B]",
+  "bg-[#8A2BE2]",
+  "bg-[#FF8C00]",
+  "bg-[#3CB371]",
+  "bg-[#FF69B4]",
+  "bg-[#20B2AA]",
 ];
 
 export default function UserProfilePage() {
   const { data: session } = useSession();
   const [showFullBio, setShowFullBio] = useState(false);
   const router = useRouter();
+  const { data: profile } = useQuery({
+    queryKey: ["profile", session?.accessToken],
+    queryFn: () => getProfile(session?.accessToken as string),
+    enabled: !!session?.accessToken,
+  });
 
   const editProfile = () => {
     router.push("/profile/edit"); // replace with your desired route
   };
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([
-    "games",
-    "concert",
-    "music",
-    "art",
-    "movie",
-    "others",
-  ]);
-
   const bio =
-    "Enjoy your favorite dishe and a lovely your friends and family and have a great time. Food from local food trucks will be available for purchase. Live music and entertainment will be provided throughout the event. Don't miss out on this amazing opportunity to connect with friends and enjoy delicious food in a beautiful outdoor setting.";
+    profile?.bio ??
+    "Enjoy your favorite dishes and have a great time. Live music and entertainment will be provided throughout the event.";
+  const displayBio = showFullBio
+    ? bio
+    : `${bio.substring(0, 120)}...`;
 
-  const displayBio = showFullBio ? bio : `${bio.substring(0, 120)}...`;
+  const interests: Interest[] = useMemo(
+    () =>
+      categories.map((category, i) => ({
+        id: category.id,
+        name: category.name,
+        color: interestColors[i % interestColors.length],
+      })),
+    []
+  );
+
+  const selectedInterests = profile?.interests ?? [];
 
   return (
     <div className="min-h-screen bg-white md:bg-gray-50">
@@ -65,7 +84,7 @@ export default function UserProfilePage() {
           <div className="relative mb-4 md:mb-0">
             <div className="w-32 h-32 rounded-full overflow-hidden">
               <Image
-                src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=60&ixlib=rb-4.0.3"
+                src={profile?.photo ?? "/placeholder-dp.jpg"}
                 alt="Profile"
                 width={128}
                 height={128}
@@ -82,7 +101,7 @@ export default function UserProfilePage() {
             <div className="flex justify-between items-start">
               <div>
                 <h2 className="text-2xl font-bold mb-2">
-                  {session?.user.firstName ?? "John Doe"}
+                  {profile?.name ?? session?.user.firstName ?? "John Doe"}
                 </h2>
                 <div className="flex items-center gap-6 mb-4">
                   <div className="text-center">
@@ -111,7 +130,9 @@ export default function UserProfilePage() {
 
         {/* Profile Info - Mobile */}
         <div className="flex flex-col items-center md:hidden">
-          <h2 className="text-2xl font-bold mb-2">Ashfak Sayem</h2>
+          <h2 className="text-2xl font-bold mb-2">
+            {profile?.name ?? session?.user.firstName ?? "John Doe"}
+          </h2>
           <div className="flex items-center gap-6 mb-4">
             <div className="text-center">
               <div className="font-bold">350</div>
