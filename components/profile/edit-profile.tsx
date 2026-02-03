@@ -9,7 +9,11 @@ import { ArrowLeft, Camera, X, Check } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { categories } from "@/lib/constants";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { getProfile, updateProfile, updateProfileLocation } from "@/lib/api/profile";
+import {
+  getProfile,
+  updateProfile,
+  updateProfileLocation,
+} from "@/lib/api/profile";
 import toast from "react-hot-toast";
 
 interface Interest {
@@ -44,7 +48,8 @@ export default function EditProfilePage() {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
-  const [locationLabel, setLocationLabel] = useState<string>("Location not set");
+  const [locationLabel, setLocationLabel] =
+    useState<string>("Location not set");
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
 
   const { data: profile } = useQuery({
@@ -60,8 +65,12 @@ export default function EditProfilePage() {
       setSelectedInterests(profile.interests ?? []);
       setImagePreview(profile.photo ?? null);
       setPhotoBase64(null);
-      const parts = [profile.city, profile.state, profile.country].filter(Boolean);
-      setLocationLabel(parts.length > 0 ? parts.join(", ") : "Location not set");
+      const parts = [profile.city, profile.state, profile.country].filter(
+        Boolean,
+      );
+      setLocationLabel(
+        parts.length > 0 ? parts.join(", ") : "Location not set",
+      );
     }
   }, [profile]);
 
@@ -140,7 +149,7 @@ export default function EditProfilePage() {
               result.data.country,
             ].filter(Boolean);
             setLocationLabel(
-              parts.length > 0 ? parts.join(", ") : "Location not set"
+              parts.length > 0 ? parts.join(", ") : "Location not set",
             );
             toast.success("Location updated.");
           } catch (error: any) {
@@ -153,7 +162,7 @@ export default function EditProfilePage() {
           toast.error("Unable to fetch location.");
           setIsUpdatingLocation(false);
         },
-        { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
       );
     } catch {
       setIsUpdatingLocation(false);
@@ -194,10 +203,7 @@ export default function EditProfilePage() {
           <div className="relative mb-2">
             <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-200">
               <Image
-                src={
-                  imagePreview ||
-                  "/placeholder.svg"
-                }
+                src={imagePreview || "/placeholder.svg"}
                 alt="Profile"
                 width={128}
                 height={128}
@@ -302,7 +308,7 @@ export default function EditProfilePage() {
             </p>
           </div>
 
-          <div>
+          <div className="pb-[100px] md:pb-0">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Location
             </label>
@@ -313,14 +319,16 @@ export default function EditProfilePage() {
                 disabled
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-gray-50 text-gray-500"
               />
-              <button
-                type="button"
-                onClick={handleUpdateLocation}
-                disabled={isUpdatingLocation}
-                className="px-4 py-3 rounded-lg bg-[#5850EC] text-white hover:bg-[#6C63FF] transition-colors disabled:opacity-70"
-              >
-                Update Location
-              </button>
+              {/* <div> */}
+                <button
+                  type="button"
+                  onClick={handleUpdateLocation}
+                  disabled={isUpdatingLocation}
+                  className="px-4 py-3 rounded-xl bg-[#5850EC] text-white hover:bg-[#6C63FF] transition-colors disabled:opacity-70"
+                >
+                  Update
+                </button>
+              {/* </div> */}
             </div>
           </div>
         </div>

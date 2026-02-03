@@ -116,7 +116,7 @@ export const Header = ({ isMenuOpen, setIsMenuOpen }: HeaderProps) => {
             <div className="flex items-center gap-2">
               <MapPin className="w-5 h-5" />
               <span className="font-medium">{locationLabel}</span>
-              <ChevronDown className="w-4 h-4" />
+              {/* <ChevronDown className="w-4 h-4" /> */}
             </div>
           </div>
 

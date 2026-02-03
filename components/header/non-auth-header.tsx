@@ -4,7 +4,7 @@ import { Menu, Search, X, MapPin, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface NonAuthHeaderProps {
   isMenuOpen: boolean;
@@ -24,39 +24,6 @@ export const NonAuthHeader = ({
     router.push("/events/search"); // replace with your desired route
   };
 
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`;
-          const res = await fetch(url);
-          if (!res.ok) return;
-          const data = await res.json();
-          const address = data?.address ?? {};
-          const city =
-            address.city ||
-            address.town ||
-            address.village ||
-            address.county ||
-            null;
-          const state = address.state || address.region || null;
-          const country = address.country || null;
-          const parts = [city, state, country].filter(Boolean);
-          if (parts.length > 0) {
-            setLocationLabel(parts.join(", "));
-          }
-        } catch {
-          // ignore reverse geocode errors
-        }
-      },
-      () => {
-        // ignore geolocation errors
-      },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
-    );
-  }, []);
   return (
     <header className="fixed top-0 left-0 right-0 bg-[#5850EC] text-white z-30">
       <div className={`max-w-7xl mx-auto md:w-[80%]`}>
@@ -85,10 +52,6 @@ export const NonAuthHeader = ({
               height={30}
               className="object-cover border rounded-full"
             />
-            <div className="flex items-center gap-1 ml-3 text-sm">
-              <MapPin className="w-4 h-4" />
-              <span>{locationLabel}</span>
-            </div>
           </div>
           <div className="hidden md:flex items-center">
             {/* <span className="text-xl font-bold">Reventlify</span> */}
@@ -118,11 +81,6 @@ export const NonAuthHeader = ({
 
           {/* Navigation Links - Desktop */}
           <div className="hidden md:flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-5 h-5" />
-              <span className="font-medium">{locationLabel}</span>
-              <ChevronDown className="w-4 h-4" />
-            </div>
             <Link
               href="/about"
               className="hover:text-white/80 transition-colors"
