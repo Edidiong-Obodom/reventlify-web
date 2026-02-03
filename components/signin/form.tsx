@@ -109,9 +109,12 @@ const SigninForm = () => {
           </button>
           <label className="text-sm text-gray-600">Remember Me</label>
         </div>
-        <button className="text-sm text-[#6366F1] hover:underline">
+        <Link
+          href="/forgot-password"
+          className="text-sm text-[#6366F1] hover:underline"
+        >
           Forgot Password?
-        </button>
+        </Link>
       </div>
 
       <button
