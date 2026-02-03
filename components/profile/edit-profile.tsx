@@ -9,7 +9,7 @@ import { ArrowLeft, Camera, X, Check } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { categories } from "@/lib/constants";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { getProfile, updateProfile } from "@/lib/api/profile";
+import { getProfile, updateProfile, updateProfileLocation } from "@/lib/api/profile";
 import toast from "react-hot-toast";
 
 interface Interest {
@@ -44,6 +44,8 @@ export default function EditProfilePage() {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [locationLabel, setLocationLabel] = useState<string>("Location not set");
+  const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", session?.accessToken],
@@ -58,6 +60,8 @@ export default function EditProfilePage() {
       setSelectedInterests(profile.interests ?? []);
       setImagePreview(profile.photo ?? null);
       setPhotoBase64(null);
+      const parts = [profile.city, profile.state, profile.country].filter(Boolean);
+      setLocationLabel(parts.length > 0 ? parts.join(", ") : "Location not set");
     }
   }, [profile]);
 
@@ -110,6 +114,49 @@ export default function EditProfilePage() {
       setPhotoBase64(null);
     } catch (error: any) {
       toast.error(error?.message ?? "Profile update failed.");
+    }
+  };
+
+  const handleUpdateLocation = async () => {
+    if (!session?.accessToken) {
+      return toast.error("Please sign in to update your location.");
+    }
+    if (!navigator.geolocation) {
+      return toast.error("Geolocation is not supported in this browser.");
+    }
+    try {
+      setIsUpdatingLocation(true);
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const result = await updateProfileLocation(session.accessToken, {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              force: true,
+            });
+            const parts = [
+              result.data.city,
+              result.data.state,
+              result.data.country,
+            ].filter(Boolean);
+            setLocationLabel(
+              parts.length > 0 ? parts.join(", ") : "Location not set"
+            );
+            toast.success("Location updated.");
+          } catch (error: any) {
+            toast.error(error?.message ?? "Location update failed.");
+          } finally {
+            setIsUpdatingLocation(false);
+          }
+        },
+        () => {
+          toast.error("Unable to fetch location.");
+          setIsUpdatingLocation(false);
+        },
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+      );
+    } catch {
+      setIsUpdatingLocation(false);
     }
   };
 
@@ -253,6 +300,28 @@ export default function EditProfilePage() {
             <p className="text-sm text-gray-500 mt-1">
               Email cannot be changed
             </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Location
+            </label>
+            <div className="flex items-center justify-between gap-4">
+              <input
+                type="text"
+                value={locationLabel}
+                disabled
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-gray-50 text-gray-500"
+              />
+              <button
+                type="button"
+                onClick={handleUpdateLocation}
+                disabled={isUpdatingLocation}
+                className="px-4 py-3 rounded-lg bg-[#5850EC] text-white hover:bg-[#6C63FF] transition-colors disabled:opacity-70"
+              >
+                Update Location
+              </button>
+            </div>
           </div>
         </div>
 

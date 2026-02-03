@@ -172,6 +172,18 @@ export default function UserProfilePage() {
           </button>
         </div>
 
+        {/* Location Section */}
+        <div className="mb-8">
+          <h3 className="text-xl font-bold mb-2">Location</h3>
+          <p className="text-gray-600">
+            {profile?.city || profile?.state || profile?.country
+              ? [profile?.city, profile?.state, profile?.country]
+                  .filter(Boolean)
+                  .join(", ")
+              : "Location not set"}
+          </p>
+        </div>
+
         {/* Interests Section */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">

@@ -8,6 +8,10 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
+import { getProfile, updateProfileLocation } from "@/lib/api/profile";
 
 interface HeaderProps {
   isMenuOpen: boolean;
@@ -17,6 +21,56 @@ interface HeaderProps {
 
 export const Header = ({ isMenuOpen, setIsMenuOpen }: HeaderProps) => {
   const router = useRouter();
+  const { data: session } = useSession();
+  const [locationLabel, setLocationLabel] = useState<string>("Location");
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile", session?.accessToken],
+    queryFn: () => getProfile(session?.accessToken as string),
+    enabled: !!session?.accessToken,
+  });
+
+  const locationFromProfile = useMemo(() => {
+    if (!profile) return null;
+    const parts = [profile.city, profile.state, profile.country].filter(Boolean);
+    return parts.length > 0 ? parts.join(", ") : null;
+  }, [profile]);
+
+  useEffect(() => {
+    if (locationFromProfile) {
+      setLocationLabel(locationFromProfile);
+    }
+  }, [locationFromProfile]);
+
+  useEffect(() => {
+    if (!session?.accessToken || !navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const result = await updateProfileLocation(session.accessToken, {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            force: false,
+          });
+          const parts = [
+            result.data.city,
+            result.data.state,
+            result.data.country,
+          ].filter(Boolean);
+          if (parts.length > 0) {
+            setLocationLabel(parts.join(", "));
+          }
+        } catch {
+          // ignore location update failures
+        }
+      },
+      () => {
+        // ignore geolocation errors
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+    );
+  }, [session?.accessToken]);
 
   const handleFocus = () => {
     router.push("/events/search"); // replace with your desired route
@@ -61,7 +115,7 @@ export const Header = ({ isMenuOpen, setIsMenuOpen }: HeaderProps) => {
 
             <div className="flex items-center gap-2">
               <MapPin className="w-5 h-5" />
-              <span className="font-medium">Lagos, Nigeria</span>
+              <span className="font-medium">{locationLabel}</span>
               <ChevronDown className="w-4 h-4" />
             </div>
           </div>

@@ -8,6 +8,11 @@ export interface ProfileData {
   photo: string | null;
   bio: string | null;
   interests: string[];
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  lastLocationUpdate: string | null;
 }
 
 export const getProfile = async (token: string): Promise<ProfileData> => {
@@ -55,3 +60,36 @@ export const updateProfile = async (
   return data.data;
 };
 
+export const updateProfileLocation = async (
+  token: string,
+  payload: { latitude: number; longitude: number; force?: boolean }
+): Promise<{
+  success: boolean;
+  skipped: boolean;
+  data: {
+    address: string | null;
+    city: string | null;
+    state: string | null;
+    country: string | null;
+    lastLocationUpdate: string | null;
+  };
+}> => {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/v1/user/profile/location`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data?.message ?? "Failed to update location");
+  }
+
+  return res.json();
+};
