@@ -4,14 +4,30 @@ import { useQuery } from "@tanstack/react-query";
 import { getRegimes } from "@/lib/api/regimes";
 import Link from "next/link";
 import { Session } from "next-auth";
+import { getBookmarkIds } from "@/lib/api/bookmarks";
+import { useEffect, useState } from "react";
 
 export const EventsSection = ({ session }: { session: Session | null }) => {
+  const [bookmarkIds, setBookmarkIds] = useState<string[]>([]);
   const { data, isLoading, error } = useQuery({
     queryKey: ["regimes", session?.accessToken],
     queryFn: () => getRegimes(session?.accessToken as string),
   });
 
+  const { data: bookmarkIdData } = useQuery({
+    queryKey: ["bookmark-ids", session?.accessToken],
+    queryFn: () => getBookmarkIds(session?.accessToken as string),
+    enabled: !!session?.accessToken,
+  });
+
+  useEffect(() => {
+    if (bookmarkIdData) {
+      setBookmarkIds(bookmarkIdData);
+    }
+  }, [bookmarkIdData]);
+
   const events = data?.data || [];
+  const bookmarkIdSet = new Set(bookmarkIds);
 
   return (
     <div>
@@ -62,7 +78,23 @@ export const EventsSection = ({ session }: { session: Session | null }) => {
             )}
           </>
         ) : (
-          events.map((event) => <EventCard key={event.id} event={event} />)
+          events.map((event) => (
+            <EventCard
+              key={event.id}
+              event={event}
+              session={session}
+              isBookmarked={bookmarkIdSet.has(String(event.id))}
+              onBookmarkChange={(isBookmarked) =>
+                setBookmarkIds((prev) => {
+                  const id = String(event.id);
+                  if (isBookmarked) {
+                    return Array.from(new Set([...prev, id]));
+                  }
+                  return prev.filter((bookmarkId) => bookmarkId !== id);
+                })
+              }
+            />
+          ))
         )}
       </div>
     </div>

@@ -43,6 +43,7 @@ export interface Regime {
   total_ticket_sales: string;
   total_revenue: string;
   pricings: Pricing[];
+  is_bookmarked?: boolean;
 }
 
 export interface SearchRegimes {

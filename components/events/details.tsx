@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Bookmark,
@@ -14,13 +14,15 @@ import {
 import ImageFallback from "../image-fallback";
 import Link from "next/link";
 import { Session } from "next-auth";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { slugify } from "@/lib/helpers/formatEventDetail";
 import { Pricing } from "@/lib/interfaces/regimeInterface";
 import MobilePricing from "./pricing/mobile";
 import PricingSidebar from "./pricing/desktop";
 import { parseMarkdown } from "@/lib";
 import DOMPurify from "dompurify";
+import toast from "react-hot-toast";
+import { bookmarkRegime, unbookmarkRegime } from "@/lib/api/bookmarks";
 
 interface EventDetailProps {
   event?: {
@@ -49,16 +51,49 @@ interface EventDetailProps {
     }[];
   };
   session: Session | null;
+  isBookmarked?: boolean;
 }
 
 export default function EventDetailPage({
   event,
   session,
+  isBookmarked = false,
 }: Readonly<EventDetailProps>) {
-  const [isSaved, setIsSaved] = useState(false);
+  const [isSaved, setIsSaved] = useState(isBookmarked);
+  const [isBookmarkLoading, setIsBookmarkLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const searchParams = useSearchParams();
+  const router = useRouter();
   const partner = searchParams.get("partner");
+
+  useEffect(() => {
+    setIsSaved(isBookmarked);
+  }, [isBookmarked]);
+
+  const handleBookmark = async () => {
+    if (!session?.accessToken || !event?.id) {
+      toast.error("Please sign in to bookmark events.");
+      router.push("/signin");
+      return;
+    }
+
+    try {
+      setIsBookmarkLoading(true);
+      if (isSaved) {
+        await unbookmarkRegime(session.accessToken, String(event.id));
+        setIsSaved(false);
+        toast.success("Removed from bookmarks.");
+      } else {
+        await bookmarkRegime(session.accessToken, String(event.id));
+        setIsSaved(true);
+        toast.success("Saved to bookmarks.");
+      }
+    } catch (error: any) {
+      toast.error(error?.message ?? "Bookmark update failed.");
+    } finally {
+      setIsBookmarkLoading(false);
+    }
+  };
 
   const handleShare = () => {
     if (navigator.share) {
@@ -104,7 +139,8 @@ export default function EventDetailPage({
             </button>
             <button
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-100"
-              onClick={() => setIsSaved(!isSaved)}
+              onClick={handleBookmark}
+              disabled={isBookmarkLoading}
             >
               {isSaved ? (
                 <Bookmark className="w-5 h-5 fill-[#5850EC] text-[#5850EC]" />
@@ -152,7 +188,8 @@ export default function EventDetailPage({
             </button>
             <button
               className="w-10 h-10 flex ml-4 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm"
-              onClick={() => setIsSaved(!isSaved)}
+              onClick={handleBookmark}
+              disabled={isBookmarkLoading}
             >
               <Bookmark
                 className={`w-5 h-5 text-white ${isSaved ? "fill-white" : ""}`}

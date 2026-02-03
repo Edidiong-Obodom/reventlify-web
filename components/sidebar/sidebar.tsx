@@ -35,7 +35,7 @@ const menuItems = [
   },
   {
     label: "Bookmarks",
-    link: "/create-event",
+    link: "/my/bookmarks",
     icon: <Heart className="w-5 h-5" />,
   },
   {

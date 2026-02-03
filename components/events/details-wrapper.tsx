@@ -8,6 +8,7 @@ import EventDetailPage from "@/components/events/details";
 import { formatEventDetail } from "@/lib/helpers/formatEventDetail";
 import { useSession } from "next-auth/react";
 import FullScreenLoader from "../common/loaders/fullScreenLoader";
+import { getBookmarkIds } from "@/lib/api/bookmarks";
 
 export default function EventDetailPageWrapper() {
   const { data: session } = useSession();
@@ -17,6 +18,12 @@ export default function EventDetailPageWrapper() {
     queryKey: ["event-detail", id],
     queryFn: () =>
       searchForRegimes({ searchString: id as string, page: 1, limit: 1 }),
+  });
+
+  const { data: bookmarkIds } = useQuery({
+    queryKey: ["bookmark-ids", session?.accessToken],
+    queryFn: () => getBookmarkIds(session?.accessToken as string),
+    enabled: !!session?.accessToken,
   });
 
   if (isLoading) {
@@ -38,5 +45,13 @@ export default function EventDetailPageWrapper() {
 
   const event = formatEventDetail(data.data[0]);
 
-  return <EventDetailPage event={event} session={session} />;
+  const isBookmarked = bookmarkIds?.includes(String(event.id)) ?? false;
+
+  return (
+    <EventDetailPage
+      event={event}
+      session={session}
+      isBookmarked={isBookmarked}
+    />
+  );
 }

@@ -7,18 +7,35 @@ import { capitalizeEachWord, capitalizeFirst } from "@/lib";
 import { slugify } from "@/lib/helpers/formatEventDetail";
 import { Session } from "next-auth";
 import { useSearchParams } from "next/navigation";
+import { useEffect, useState, type MouseEvent } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { bookmarkRegime, unbookmarkRegime } from "@/lib/api/bookmarks";
 
 export const EventCard = ({
   event,
   coverLink,
   session,
+  isBookmarked: isBookmarkedProp,
+  onBookmarkChange,
 }: {
   event: Partial<Regime>;
   coverLink?: boolean;
   session?: Session | null;
+  isBookmarked?: boolean;
+  onBookmarkChange?: (isBookmarked: boolean) => void;
 }) => {
   const searchParams = useSearchParams();
   const partner = searchParams.get("partner");
+  const router = useRouter();
+  const [isBookmarked, setIsBookmarked] = useState(
+    Boolean(isBookmarkedProp)
+  );
+  const [isBookmarkLoading, setIsBookmarkLoading] = useState(false);
+
+  useEffect(() => {
+    setIsBookmarked(Boolean(isBookmarkedProp));
+  }, [isBookmarkedProp]);
   const handleShare = () => {
     if (navigator.share) {
       navigator
@@ -36,6 +53,38 @@ export const EventCard = ({
         .catch((error) => console.error("Error sharing", error));
     } else {
       alert("Sharing is not supported in your browser.");
+    }
+  };
+
+  const handleBookmark = async (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!session?.accessToken) {
+      toast.error("Please sign in to bookmark events.");
+      router.push("/signin");
+      return;
+    }
+
+    if (!event.id) return;
+
+    try {
+      setIsBookmarkLoading(true);
+      if (isBookmarked) {
+        await unbookmarkRegime(session.accessToken, String(event.id));
+        setIsBookmarked(false);
+        onBookmarkChange?.(false);
+        toast.success("Removed from bookmarks.");
+      } else {
+        await bookmarkRegime(session.accessToken, String(event.id));
+        setIsBookmarked(true);
+        onBookmarkChange?.(true);
+        toast.success("Saved to bookmarks.");
+      }
+    } catch (error: any) {
+      toast.error(error?.message ?? "Bookmark update failed.");
+    } finally {
+      setIsBookmarkLoading(false);
     }
   };
   return (
@@ -67,8 +116,16 @@ export const EventCard = ({
             <Share2 className="w-5 h-5 text-gray-600" />
           </button>
         )}
-        <button className="absolute top-4 right-4 bg-white p-2 rounded-lg hover:scale-110 transition-transform">
-          <Heart className="w-5 h-5 text-gray-600" />
+        <button
+          onClick={handleBookmark}
+          disabled={isBookmarkLoading}
+          className="absolute top-4 right-4 bg-white p-2 rounded-lg hover:scale-110 transition-transform disabled:opacity-70"
+        >
+          <Heart
+            className={`w-5 h-5 ${
+              isBookmarked ? "text-[#FF6B6B] fill-[#FF6B6B]" : "text-gray-600"
+            }`}
+          />
         </button>
       </div>
       <div className="p-4">

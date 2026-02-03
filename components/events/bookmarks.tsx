@@ -1,27 +1,23 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { ArrowLeft, Search, SlidersHorizontal } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { getRegimes, searchForRegimes } from "@/lib/api/regimes";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { getBookmarkedRegimes } from "@/lib/api/bookmarks";
 import { EventCard, EventCardSkeleton } from "./event-card";
 import { categories } from "@/lib/constants";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useSearchParams } from "next/navigation";
-import { getBookmarkIds } from "@/lib/api/bookmarks";
 
-export default function SearchPage() {
+export default function BookmarksPage() {
   const { data: session } = useSession();
-  const searchParams = useSearchParams();
-  const partner = searchParams.get("partner");
   const inputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 500);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [bookmarkIds, setBookmarkIds] = useState<string[]>([]);
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
   const limit = 10;
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,47 +32,16 @@ export default function SearchPage() {
     isLoading,
     error,
   } = useInfiniteQuery({
-    queryKey: [
-      "regimes",
-      session?.accessToken,
-      debouncedSearch,
-      selectedCategory,
-    ],
-    queryFn: async ({ pageParam = 1 }) => {
-      if (debouncedSearch.trim() !== "") {
-        return searchForRegimes({
-          searchString: debouncedSearch,
-          type:
-            selectedCategory === "All" ? undefined : (selectedCategory as any),
-          page: pageParam,
-          limit,
-        });
-      } else {
-        return getRegimes(session?.accessToken as string, pageParam, limit);
-      }
-    },
+    queryKey: ["bookmarks", session?.accessToken],
+    queryFn: ({ pageParam = 1 }) =>
+      getBookmarkedRegimes(session?.accessToken as string, pageParam, limit),
     getNextPageParam: (lastPage, allPages) => {
-      // If the number of items returned is less than the limit, we've reached the end
       if (lastPage?.data.length < limit) return undefined;
-      return allPages.length + 1; // Next page number
+      return allPages.length + 1;
     },
     initialPageParam: 1,
-    // enabled: !!session?.accessToken,
-  });
-
-  const { data: bookmarkIdData } = useQuery({
-    queryKey: ["bookmark-ids", session?.accessToken],
-    queryFn: () => getBookmarkIds(session?.accessToken as string),
     enabled: !!session?.accessToken,
   });
-
-  useEffect(() => {
-    if (bookmarkIdData) {
-      setBookmarkIds(bookmarkIdData);
-    }
-  }, [bookmarkIdData]);
-
-  const bookmarkIdSet = new Set(bookmarkIds);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -94,11 +59,10 @@ export default function SearchPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // New: Auto-fetch if page is not tall enough
   useEffect(() => {
     const checkPageHeight = () => {
       if (
-        window.innerHeight >= document.body.offsetHeight - 500 && // If the page doesn't fill the screen + threshold
+        window.innerHeight >= document.body.offsetHeight - 500 &&
         hasNextPage &&
         !isFetchingNextPage
       ) {
@@ -106,20 +70,45 @@ export default function SearchPage() {
       }
     };
 
-    checkPageHeight(); // Check immediately after render (or when data changes)
+    checkPageHeight();
 
     window.addEventListener("resize", checkPageHeight);
 
     return () => window.removeEventListener("resize", checkPageHeight);
   }, [data, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const allEvents = data?.pages.flatMap((page) => page.data) || [];
+  if (!session?.accessToken) {
+    return (
+      <div className="min-h-screen bg-white md:bg-gray-50 flex flex-col items-center justify-center text-center px-4">
+        <h2 className="text-2xl font-semibold mb-2">Sign in to view bookmarks</h2>
+        <p className="text-gray-500 max-w-md mb-6">
+          Your saved events are tied to your account.
+        </p>
+        <Link
+          href="/signin"
+          className="bg-[#5850EC] text-white px-6 py-3 rounded-full hover:bg-[#4741d7] transition"
+        >
+          Sign In
+        </Link>
+      </div>
+    );
+  }
 
-  const filteredEvents = allEvents.filter((event) => {
-    const matchesCategory =
-      selectedCategory === "All" || event.type === selectedCategory;
-    return matchesCategory;
-  });
+  const allEvents = data?.pages.flatMap((page) => page.data) || [];
+  const visibleEvents = allEvents.filter(
+    (event) => !removedIds.includes(String(event.id))
+  );
+
+  const filteredEvents = useMemo(() => {
+    const search = debouncedSearch.trim().toLowerCase();
+    return visibleEvents.filter((event) => {
+      const matchesCategory =
+        selectedCategory === "All" || event.type === selectedCategory;
+      if (!search) return matchesCategory;
+      const haystack = `${event.name} ${event.venue} ${event.city} ${event.state} ${event.country}`.toLowerCase();
+      return matchesCategory && haystack.includes(search);
+    });
+  }, [visibleEvents, debouncedSearch, selectedCategory]);
 
   return (
     <div className="min-h-screen bg-white md:bg-gray-50">
@@ -138,9 +127,7 @@ export default function SearchPage() {
               <input
                 type="text"
                 ref={inputRef}
-                placeholder={`${
-                  partner ? "Refer and earn!" : "Search Reventlify..."
-                }`}
+                placeholder="Search bookmarks..."
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="w-full pl-10 pr-4 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#5850EC]/50 focus:border-[#5850EC]"
@@ -208,10 +195,11 @@ export default function SearchPage() {
                 <div className="w-20 h-20 bg-[#5850EC]/10 rounded-full flex items-center justify-center mb-4">
                   <Search className="w-10 h-10 text-[#5850EC]" />
                 </div>
-                <h2 className="text-xl font-semibold mb-2">No events found</h2>
+                <h2 className="text-xl font-semibold mb-2">
+                  No bookmarks found
+                </h2>
                 <p className="text-gray-500 text-center max-w-md">
-                  We couldn't find any events matching your search. Try
-                  adjusting your filters or search term.
+                  Save events to see them here later.
                 </p>
               </div>
             )}
@@ -223,16 +211,14 @@ export default function SearchPage() {
                 <EventCard
                   event={event}
                   session={session}
-                  isBookmarked={bookmarkIdSet.has(String(event.id))}
-                  onBookmarkChange={(isBookmarked) =>
-                    setBookmarkIds((prev) => {
-                      const id = String(event.id);
-                      if (isBookmarked) {
-                        return Array.from(new Set([...prev, id]));
-                      }
-                      return prev.filter((bookmarkId) => bookmarkId !== id);
-                    })
-                  }
+                  isBookmarked={true}
+                  onBookmarkChange={(isBookmarked) => {
+                    if (!isBookmarked) {
+                      setRemovedIds((prev) => [
+                        ...new Set([...prev, String(event.id)]),
+                      ]);
+                    }
+                  }}
                 />
               </div>
             ))}
@@ -250,3 +236,4 @@ export default function SearchPage() {
     </div>
   );
 }
+
