@@ -27,6 +27,12 @@ export const formatEventDetail = (event: any) => {
     attendees: Number(event.total_ticket_sales ?? 0),
     image: event.regime_banner ?? "/placeholder.svg",
     gallery: event.regime_gallery,
+    lineups: (event.regime_lineups ?? []).map((lineup: any) => ({
+      id: lineup.id,
+      title: lineup.title,
+      time: moment(lineup.performance_time, "HH:mm:ss").format("h:mm A"),
+      image: lineup.image,
+    })),
   };
 };
 

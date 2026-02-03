@@ -41,6 +41,12 @@ interface EventDetailProps {
     attendees: number;
     image: string;
     gallery: string[];
+    lineups: {
+      id: string;
+      title: string;
+      time: string;
+      image: string;
+    }[];
   };
   session: Session | null;
 }
@@ -271,36 +277,38 @@ export default function EventDetailPage({
 
           {/* Additional Content for Desktop */}
           <div className="block space-y-8 mb-8">
-            <div>
-              <h2 className="text-1xl font-bold mb-4">Lineup</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full overflow-hidden">
-                        <ImageFallback
-                          src={`https://i.pravatar.cc/100?img=${i + 10}`}
-                          fallbackSrc="/placeholder.svg?height=48&width=48"
-                          alt={`Artist ${i}`}
-                          width={48}
-                          height={48}
-                          className="object-cover"
-                        />
-                      </div>
-                      <div>
-                        <h3 className="font-medium">Band Name {i}</h3>
-                        <p className="text-sm text-gray-500">
-                          Main Stage • {i + 4}:00 PM
-                        </p>
+            {event?.lineups && event.lineups.length > 0 && (
+              <div>
+                <h2 className="text-1xl font-bold mb-4">Lineup</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {event.lineups.map((lineup) => (
+                    <div
+                      key={lineup.id}
+                      className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full overflow-hidden">
+                          <ImageFallback
+                            src={lineup.image}
+                            fallbackSrc="/placeholder.svg?height=48&width=48"
+                            alt={lineup.title}
+                            width={48}
+                            height={48}
+                            className="object-cover"
+                          />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{lineup.title}</h3>
+                          <p className="text-sm text-gray-500">
+                            Performance • {lineup.time}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {event?.gallery && event?.gallery.length > 0 && (
               <div>
