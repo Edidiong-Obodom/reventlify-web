@@ -47,25 +47,22 @@ export default function OtherProfilePage() {
 
   const { data: profile, refetch: refetchProfile } = useQuery({
     queryKey: ["public-profile", id, session?.accessToken],
-    queryFn: () => getUserProfileById(session?.accessToken as string, id as string),
+    queryFn: () =>
+      getUserProfileById(session?.accessToken as string, id as string),
     enabled: !!session?.accessToken && !!id,
   });
 
-  const {
-    data: regimesData,
-    isLoading: isRegimesLoading,
-  } = useQuery({
+  const { data: regimesData, isLoading: isRegimesLoading } = useQuery({
     queryKey: ["public-profile-regimes", id, session?.accessToken],
     queryFn: () =>
       getUserRegimes(session?.accessToken as string, id as string, 1, 20),
     enabled: !!session?.accessToken && !!id && activeTab === "event",
   });
 
-  const bio =
-    profile?.bio ??
-    "Enjoy your favorite dishes and have a great time. Live music and entertainment will be provided throughout the event.";
+  const bio = profile?.bio ?? "Nothing to show.";
 
-  const displayBio = showFullBio ? bio : `${bio.substring(0, 120)}...`;
+  const displayBio =
+    showFullBio || bio.length <= 120 ? bio : `${bio.substring(0, 120)}...`;
 
   const isFollowing = profile?.isFollowing ?? false;
   const followerCount = profile?.followersCount ?? 0;
@@ -140,17 +137,19 @@ export default function OtherProfilePage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={handleFollowToggle}
-                  className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-colors ${
-                    isFollowing
-                      ? "border border-gray-300 text-gray-700 hover:bg-gray-50"
-                      : "bg-[#5850EC] text-white hover:bg-[#6C63FF]"
-                  }`}
-                >
-                  <UserPlus className="w-4 h-4" />
-                  <span>{isFollowing ? "Following" : "Follow"}</span>
-                </button>
+                {id !== session?.user.id && (
+                  <button
+                    onClick={handleFollowToggle}
+                    className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-colors ${
+                      isFollowing
+                        ? "border border-gray-300 text-gray-700 hover:bg-gray-50"
+                        : "bg-[#5850EC] text-white hover:bg-[#6C63FF]"
+                    }`}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>{isFollowing ? "Following" : "Follow"}</span>
+                  </button>
+                )}
                 <button className="flex items-center gap-2 border border-[#5850EC] text-[#5850EC] px-6 py-2 rounded-lg hover:bg-[#5850EC]/5 transition-colors">
                   <MessageCircle className="w-4 h-4" />
                   <span>Messages</span>
@@ -162,9 +161,7 @@ export default function OtherProfilePage() {
 
         {/* Profile Info - Mobile */}
         <div className="flex flex-col items-center md:hidden">
-          <h2 className="text-2xl font-bold mb-2">
-            {profile?.name ?? "User"}
-          </h2>
+          <h2 className="text-2xl font-bold mb-2">{profile?.name ?? "User"}</h2>
           <div className="flex items-center gap-6 mb-4">
             <div className="text-center">
               <div className="font-bold">{followingCount}</div>
@@ -221,17 +218,19 @@ export default function OtherProfilePage() {
         {activeTab === "about" && (
           <div>
             <p className="text-gray-600 mb-1">{displayBio}</p>
-            <button
-              onClick={() => setShowFullBio(!showFullBio)}
-              className="text-[#5850EC] flex items-center hover:underline"
-            >
-              {showFullBio ? "Show Less" : "Read More"}
-              <ChevronDown
-                className={`w-4 h-4 ml-1 transition-transform ${
-                  showFullBio ? "rotate-180" : ""
-                }`}
-              />
-            </button>
+            {bio.length > 120 && (
+              <button
+                onClick={() => setShowFullBio(!showFullBio)}
+                className="text-[#5850EC] flex items-center hover:underline"
+              >
+                {showFullBio ? "Show Less" : "Read More"}
+                <ChevronDown
+                  className={`w-4 h-4 ml-1 transition-transform ${
+                    showFullBio ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+            )}
           </div>
         )}
 

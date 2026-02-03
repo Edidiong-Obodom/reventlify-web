@@ -44,12 +44,9 @@ export default function UserProfilePage() {
   const editProfile = () => {
     router.push("/profile/edit"); // replace with your desired route
   };
-  const bio =
-    profile?.bio ??
-    "Enjoy your favorite dishes and have a great time. Live music and entertainment will be provided throughout the event.";
-  const displayBio = showFullBio
-    ? bio
-    : `${bio.substring(0, 120)}...`;
+  const bio = profile?.bio ?? "Nothing to show.";
+  const displayBio =
+    showFullBio || bio.length <= 120 ? bio : `${bio.substring(0, 120)}...`;
 
   const interests: Interest[] = useMemo(
     () =>
@@ -58,7 +55,7 @@ export default function UserProfilePage() {
         name: category.name,
         color: interestColors[i % interestColors.length],
       })),
-    []
+    [],
   );
 
   const selectedInterests = profile?.interests ?? [];
@@ -161,17 +158,19 @@ export default function UserProfilePage() {
         <div className="mb-8">
           <h3 className="text-xl font-bold mb-2">About Me</h3>
           <p className="text-gray-600 mb-1">{displayBio}</p>
-          <button
-            onClick={() => setShowFullBio(!showFullBio)}
-            className="text-[#5850EC] flex items-center hover:underline"
-          >
-            {showFullBio ? "Show Less" : "Read More"}
-            <ChevronDown
-              className={`w-4 h-4 ml-1 transition-transform ${
-                showFullBio ? "rotate-180" : ""
-              }`}
-            />
-          </button>
+          {bio.length > 120 && (
+            <button
+              onClick={() => setShowFullBio(!showFullBio)}
+              className="text-[#5850EC] flex items-center hover:underline"
+            >
+              {showFullBio ? "Show Less" : "Read More"}
+              <ChevronDown
+                className={`w-4 h-4 ml-1 transition-transform ${
+                  showFullBio ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+          )}
         </div>
 
         {/* Location Section */}
