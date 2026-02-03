@@ -77,6 +77,22 @@ export default function BookmarksPage() {
     return () => window.removeEventListener("resize", checkPageHeight);
   }, [data, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const allEvents = data?.pages.flatMap((page) => page.data) || [];
+  const visibleEvents = allEvents.filter(
+    (event) => !removedIds.includes(String(event.id))
+  );
+
+  const filteredEvents = useMemo(() => {
+    const search = debouncedSearch.trim().toLowerCase();
+    return visibleEvents.filter((event) => {
+      const matchesCategory =
+        selectedCategory === "All" || event.type === selectedCategory;
+      if (!search) return matchesCategory;
+      const haystack = `${event.name} ${event.venue} ${event.city} ${event.state} ${event.country}`.toLowerCase();
+      return matchesCategory && haystack.includes(search);
+    });
+  }, [visibleEvents, debouncedSearch, selectedCategory]);
+
   if (!session?.accessToken) {
     return (
       <div className="min-h-screen bg-white md:bg-gray-50 flex flex-col items-center justify-center text-center px-4">
@@ -93,22 +109,6 @@ export default function BookmarksPage() {
       </div>
     );
   }
-
-  const allEvents = data?.pages.flatMap((page) => page.data) || [];
-  const visibleEvents = allEvents.filter(
-    (event) => !removedIds.includes(String(event.id))
-  );
-
-  const filteredEvents = useMemo(() => {
-    const search = debouncedSearch.trim().toLowerCase();
-    return visibleEvents.filter((event) => {
-      const matchesCategory =
-        selectedCategory === "All" || event.type === selectedCategory;
-      if (!search) return matchesCategory;
-      const haystack = `${event.name} ${event.venue} ${event.city} ${event.state} ${event.country}`.toLowerCase();
-      return matchesCategory && haystack.includes(search);
-    });
-  }, [visibleEvents, debouncedSearch, selectedCategory]);
 
   return (
     <div className="min-h-screen bg-white md:bg-gray-50">
@@ -236,4 +236,3 @@ export default function BookmarksPage() {
     </div>
   );
 }
-
