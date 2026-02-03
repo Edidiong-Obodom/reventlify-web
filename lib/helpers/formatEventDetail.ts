@@ -19,6 +19,7 @@ export const formatEventDetail = (event: any) => {
       event.city
     )}, ${capitalizeFirst(event.state)}, ${capitalizeFirst(event.country)}`,
     organizer: {
+      id: event.creator_id,
       name: event.creator_user_name,
       image: event.creator_photo ?? "/placeholder.svg",
     },

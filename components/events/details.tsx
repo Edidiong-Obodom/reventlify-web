@@ -23,6 +23,8 @@ import { parseMarkdown } from "@/lib";
 import DOMPurify from "dompurify";
 import toast from "react-hot-toast";
 import { bookmarkRegime, unbookmarkRegime } from "@/lib/api/bookmarks";
+import { followUser, getUserProfileById, unfollowUser } from "@/lib/api/profile";
+import { useQuery } from "@tanstack/react-query";
 
 interface EventDetailProps {
   event?: {
@@ -35,6 +37,7 @@ interface EventDetailProps {
     location: string;
     address: string;
     organizer: {
+      id: string;
       name: string;
       image: string;
     };
@@ -66,9 +69,25 @@ export default function EventDetailPage({
   const router = useRouter();
   const partner = searchParams.get("partner");
 
+  const { data: organizerProfile } = useQuery({
+    queryKey: ["organizer-profile", event?.organizer?.id, session?.accessToken],
+    queryFn: () =>
+      getUserProfileById(
+        session?.accessToken as string,
+        event?.organizer?.id as string
+      ),
+    enabled: !!session?.accessToken && !!event?.organizer?.id,
+  });
+
   useEffect(() => {
     setIsSaved(isBookmarked);
   }, [isBookmarked]);
+
+  useEffect(() => {
+    if (organizerProfile) {
+      setIsFollowing(organizerProfile.isFollowing);
+    }
+  }, [organizerProfile]);
 
   const handleBookmark = async () => {
     if (!session?.accessToken || !event?.id) {
@@ -92,6 +111,25 @@ export default function EventDetailPage({
       toast.error(error?.message ?? "Bookmark update failed.");
     } finally {
       setIsBookmarkLoading(false);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!session?.accessToken || !event?.organizer?.id) {
+      toast.error("Please sign in to follow organizers.");
+      router.push("/signin");
+      return;
+    }
+    try {
+      if (isFollowing) {
+        await unfollowUser(session.accessToken, event.organizer.id);
+        setIsFollowing(false);
+      } else {
+        await followUser(session.accessToken, event.organizer.id);
+        setIsFollowing(true);
+      }
+    } catch (error: any) {
+      toast.error(error?.message ?? "Follow update failed.");
     }
   };
 
@@ -266,20 +304,25 @@ export default function EventDetailPage({
 
             <div className="flex items-start">
               <div className="w-14 h-14 overflow-hidden rounded-xl flex-shrink-0">
-                <ImageFallback
-                  src={event?.organizer.image as string}
-                  fallbackSrc="/placeholder-dp.jpg"
-                  alt={event?.organizer.name as string}
-                  width={56}
-                  height={56}
-                  className="object-cover w-full h-full"
-                />
+                <Link href={`/profile/${event?.organizer?.id ?? ""}`}>
+                  <ImageFallback
+                    src={event?.organizer.image as string}
+                    fallbackSrc="/placeholder-dp.jpg"
+                    alt={event?.organizer.name as string}
+                    width={56}
+                    height={56}
+                    className="object-cover w-full h-full"
+                  />
+                </Link>
               </div>
               <div className="ml-4 flex flex-1 items-center justify-between">
                 <div>
-                  <h3 className="text-[1.2rem] font-semibold">
+                  <Link
+                    href={`/profile/${event?.organizer?.id ?? ""}`}
+                    className="text-[1.2rem] font-semibold hover:text-[#5850EC]"
+                  >
                     {event?.organizer?.name}
-                  </h3>
+                  </Link>
                   <p className="text-gray-500">Organizer</p>
                 </div>
                 <button
@@ -288,7 +331,7 @@ export default function EventDetailPage({
                       ? "border-[#5850EC] text-[#5850EC]"
                       : "border-gray-300 text-gray-600 hover:border-gray-400"
                   }`}
-                  onClick={() => setIsFollowing(!isFollowing)}
+                  onClick={handleFollowToggle}
                 >
                   {isFollowing ? "Following" : "Follow"}
                 </button>

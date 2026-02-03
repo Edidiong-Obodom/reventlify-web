@@ -1,3 +1,5 @@
+import { GetRegimes } from "../interfaces/regimeInterface";
+
 export interface ProfileData {
   id: string;
   name: string;
@@ -13,15 +15,39 @@ export interface ProfileData {
   state: string | null;
   country: string | null;
   lastLocationUpdate: string | null;
+  followersCount?: number;
+  followingCount?: number;
+}
+
+export interface PublicProfile {
+  id: string;
+  name: string;
+  firstName: string | null;
+  lastName: string | null;
+  userName: string | null;
+  email: string;
+  photo: string | null;
+  bio: string | null;
+  interests: string[];
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  followersCount: number;
+  followingCount: number;
+  isFollowing: boolean;
 }
 
 export const getProfile = async (token: string): Promise<ProfileData> => {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/user/profile`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/v1/user/profile`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
     },
-    cache: "no-store",
-  });
+  );
 
   if (!res.ok) {
     throw new Error("Failed to fetch profile");
@@ -40,16 +66,19 @@ export interface UpdateProfilePayload {
 
 export const updateProfile = async (
   token: string,
-  payload: UpdateProfilePayload
+  payload: UpdateProfilePayload,
 ): Promise<ProfileData> => {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/user/profile`, {
-    method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/v1/user/profile`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
+  );
 
   if (!res.ok) {
     const data = await res.json();
@@ -62,7 +91,7 @@ export const updateProfile = async (
 
 export const updateProfileLocation = async (
   token: string,
-  payload: { latitude: number; longitude: number; force?: boolean }
+  payload: { latitude: number; longitude: number; force?: boolean },
 ): Promise<{
   success: boolean;
   skipped: boolean;
@@ -83,12 +112,101 @@ export const updateProfileLocation = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
-    }
+    },
   );
 
   if (!res.ok) {
     const data = await res.json();
     throw new Error(data?.message ?? "Failed to update location");
+  }
+
+  return res.json();
+};
+
+export const getUserProfileById = async (
+  token: string,
+  userId: string,
+): Promise<PublicProfile> => {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/v1/user/profile/${userId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch profile");
+  }
+
+  const data = await res.json();
+  return data.data;
+};
+
+export const followUser = async (
+  token: string,
+  userId: string,
+): Promise<{ success: boolean; following: boolean }> => {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/v1/user/profile/${userId}/follow`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data?.message ?? "Failed to follow user");
+  }
+
+  return res.json();
+};
+
+export const unfollowUser = async (
+  token: string,
+  userId: string,
+): Promise<{ success: boolean; following: boolean }> => {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/v1/user/profile/${userId}/follow`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data?.message ?? "Failed to unfollow user");
+  }
+
+  return res.json();
+};
+
+export const getUserRegimes = async (
+  token: string,
+  userId: string,
+  page: number = 1,
+  limit: number = 10,
+): Promise<GetRegimes> => {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/v1/user/profile/${userId}/regimes?page=${page}&limit=${limit}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch user regimes");
   }
 
   return res.json();

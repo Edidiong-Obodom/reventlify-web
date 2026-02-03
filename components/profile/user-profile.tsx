@@ -62,6 +62,8 @@ export default function UserProfilePage() {
   );
 
   const selectedInterests = profile?.interests ?? [];
+  const followersCount = profile?.followersCount ?? 0;
+  const followingCount = profile?.followingCount ?? 0;
 
   return (
     <div className="min-h-screen bg-white md:bg-gray-50">
@@ -105,12 +107,12 @@ export default function UserProfilePage() {
                 </h2>
                 <div className="flex items-center gap-6 mb-4">
                   <div className="text-center">
-                    <div className="font-bold">350</div>
+                    <div className="font-bold">{followingCount}</div>
                     <div className="text-gray-500 text-sm">Following</div>
                   </div>
                   <div className="h-10 w-px bg-gray-200"></div>
                   <div className="text-center">
-                    <div className="font-bold">346</div>
+                    <div className="font-bold">{followersCount}</div>
                     <div className="text-gray-500 text-sm">Followers</div>
                   </div>
                 </div>
@@ -135,12 +137,12 @@ export default function UserProfilePage() {
           </h2>
           <div className="flex items-center gap-6 mb-4">
             <div className="text-center">
-              <div className="font-bold">350</div>
+              <div className="font-bold">{followingCount}</div>
               <div className="text-gray-500 text-sm">Following</div>
             </div>
             <div className="h-10 w-px bg-gray-200"></div>
             <div className="text-center">
-              <div className="font-bold">346</div>
+              <div className="font-bold">{followersCount}</div>
               <div className="text-gray-500 text-sm">Followers</div>
             </div>
           </div>

@@ -10,6 +10,16 @@ import {
   MessageCircle,
   ChevronDown,
 } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  followUser,
+  getUserProfileById,
+  getUserRegimes,
+  unfollowUser,
+} from "@/lib/api/profile";
+import { EventCard, EventCardSkeleton } from "@/components/events/event-card";
 
 interface TabProps {
   label: string;
@@ -29,14 +39,54 @@ const Tab = ({ label, active, onClick }: TabProps) => (
 );
 
 export default function OtherProfilePage() {
+  const router = useRouter();
+  const { id } = useParams();
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState("about");
-  const [isFollowing, setIsFollowing] = useState(false);
   const [showFullBio, setShowFullBio] = useState(false);
 
+  const { data: profile, refetch: refetchProfile } = useQuery({
+    queryKey: ["public-profile", id, session?.accessToken],
+    queryFn: () => getUserProfileById(session?.accessToken as string, id as string),
+    enabled: !!session?.accessToken && !!id,
+  });
+
+  const {
+    data: regimesData,
+    isLoading: isRegimesLoading,
+  } = useQuery({
+    queryKey: ["public-profile-regimes", id, session?.accessToken],
+    queryFn: () =>
+      getUserRegimes(session?.accessToken as string, id as string, 1, 20),
+    enabled: !!session?.accessToken && !!id && activeTab === "event",
+  });
+
   const bio =
-    "Enjoy your favorite dishe and a lovely your friends and family and have a great time. Food from local food trucks will be available for purchase. Live music and entertainment will be provided throughout the event.";
+    profile?.bio ??
+    "Enjoy your favorite dishes and have a great time. Live music and entertainment will be provided throughout the event.";
 
   const displayBio = showFullBio ? bio : `${bio.substring(0, 120)}...`;
+
+  const isFollowing = profile?.isFollowing ?? false;
+  const followerCount = profile?.followersCount ?? 0;
+  const followingCount = profile?.followingCount ?? 0;
+
+  const handleFollowToggle = async () => {
+    if (!session?.accessToken || !id) {
+      router.push("/signin");
+      return;
+    }
+    try {
+      if (isFollowing) {
+        await unfollowUser(session.accessToken, id as string);
+      } else {
+        await followUser(session.accessToken, id as string);
+      }
+      await refetchProfile();
+    } catch {
+      // ignore for now
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white md:bg-gray-50">
@@ -61,7 +111,7 @@ export default function OtherProfilePage() {
           <div className="mb-4 md:mb-0">
             <div className="w-32 h-32 rounded-full overflow-hidden">
               <Image
-                src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=60&ixlib=rb-4.0.3"
+                src={profile?.photo ?? "/placeholder-dp.jpg"}
                 alt="Profile"
                 width={128}
                 height={128}
@@ -74,22 +124,24 @@ export default function OtherProfilePage() {
           <div className="hidden md:block flex-1">
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-2xl font-bold mb-2">David Silbia</h2>
+                <h2 className="text-2xl font-bold mb-2">
+                  {profile?.name ?? "User"}
+                </h2>
                 <div className="flex items-center gap-6 mb-4">
                   <div className="text-center">
-                    <div className="font-bold">350</div>
+                    <div className="font-bold">{followingCount}</div>
                     <div className="text-gray-500 text-sm">Following</div>
                   </div>
                   <div className="h-10 w-px bg-gray-200"></div>
                   <div className="text-center">
-                    <div className="font-bold">346</div>
+                    <div className="font-bold">{followerCount}</div>
                     <div className="text-gray-500 text-sm">Followers</div>
                   </div>
                 </div>
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setIsFollowing(!isFollowing)}
+                  onClick={handleFollowToggle}
                   className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-colors ${
                     isFollowing
                       ? "border border-gray-300 text-gray-700 hover:bg-gray-50"
@@ -110,22 +162,24 @@ export default function OtherProfilePage() {
 
         {/* Profile Info - Mobile */}
         <div className="flex flex-col items-center md:hidden">
-          <h2 className="text-2xl font-bold mb-2">David Silbia</h2>
+          <h2 className="text-2xl font-bold mb-2">
+            {profile?.name ?? "User"}
+          </h2>
           <div className="flex items-center gap-6 mb-4">
             <div className="text-center">
-              <div className="font-bold">350</div>
+              <div className="font-bold">{followingCount}</div>
               <div className="text-gray-500 text-sm">Following</div>
             </div>
             <div className="h-10 w-px bg-gray-200"></div>
             <div className="text-center">
-              <div className="font-bold">346</div>
+              <div className="font-bold">{followerCount}</div>
               <div className="text-gray-500 text-sm">Followers</div>
             </div>
           </div>
 
           <div className="flex gap-2 w-full mb-6">
             <button
-              onClick={() => setIsFollowing(!isFollowing)}
+              onClick={handleFollowToggle}
               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg transition-colors ${
                 isFollowing
                   ? "border border-gray-300 text-gray-700"
@@ -181,7 +235,13 @@ export default function OtherProfilePage() {
           </div>
         )}
 
-        {activeTab === "event" && <EventsTab />}
+        {activeTab === "event" && (
+          <EventsTab
+            isLoading={isRegimesLoading}
+            events={regimesData?.data ?? []}
+            session={session}
+          />
+        )}
 
         {activeTab === "reviews" && <ReviewsTab />}
       </main>
@@ -189,57 +249,29 @@ export default function OtherProfilePage() {
   );
 }
 
-function EventsTab() {
-  const events = [
-    {
-      id: "1",
-      title: "A virtual evening of smooth jazz",
-      date: "1ST MAY",
-      day: "SAT",
-      time: "2:00 PM",
-      image: "/placeholder.svg?height=100&width=100&text=🎷",
-    },
-    {
-      id: "2",
-      title: "Jo malone london's mother's day",
-      date: "1ST MAY",
-      day: "SAT",
-      time: "2:00 PM",
-      image: "/placeholder.svg?height=100&width=100&text=💐",
-    },
-    {
-      id: "3",
-      title: "Women's leadership conference",
-      date: "1ST MAY",
-      day: "SAT",
-      time: "2:00 PM",
-      image: "/placeholder.svg?height=100&width=100&text=👩‍💼",
-    },
-  ];
+function EventsTab({
+  events,
+  isLoading,
+  session,
+}: {
+  events: any[];
+  isLoading: boolean;
+  session: any;
+}) {
+  if (isLoading) {
+    return (
+      <div className="space-y-4 md:grid md:grid-cols-2 md:gap-6 md:space-y-0 lg:grid-cols-3">
+        {[1, 2, 3, 4].map((i) => (
+          <EventCardSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-4 md:grid md:grid-cols-2 md:gap-6 md:space-y-0 lg:grid-cols-3">
       {events.map((event) => (
-        <Link href={`/events/${event.id}`} key={event.id}>
-          <div className="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-shadow flex gap-4 p-4 md:p-0 md:flex-col md:max-w-xs">
-            <div className="w-20 h-20 md:w-full md:h-40 rounded-lg md:rounded-none md:rounded-t-xl overflow-hidden bg-[#5850EC]/10 relative flex-shrink-0">
-              <Image
-                src={event.image || "/placeholder.svg"}
-                alt={event.title}
-                fill
-                className="object-cover"
-              />
-            </div>
-            <div className="flex-1 min-w-0 md:p-4">
-              <div className="text-[#5850EC] font-medium text-sm mb-1">
-                {event.date}- {event.day} -{event.time}
-              </div>
-              <h2 className="text-lg font-semibold line-clamp-2">
-                {event.title}
-              </h2>
-            </div>
-          </div>
-        </Link>
+        <EventCard key={event.id} event={event} session={session} />
       ))}
     </div>
   );
