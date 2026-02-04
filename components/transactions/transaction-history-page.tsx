@@ -12,9 +12,7 @@ import {
   CheckCircle,
   Eye,
 } from "lucide-react";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { getTransactions, searchForTransactions } from "@/lib/api/transaction";
-import { useDebounce } from "@/hooks/useDebounce";
+import { getTransactions } from "@/lib/api/transaction";
 import { useSession } from "next-auth/react";
 import {
   formatActionText,
@@ -38,83 +36,149 @@ export default function TransactionHistoryPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const { data: session } = useSession();
   const limit = 10;
+  type MonthState = {
+    year: number;
+    month: number;
+    pages: Transaction[][];
+    page: number;
+    hasNext: boolean;
+    isLoading: boolean;
+    error?: string;
+    balance?: number;
+  };
 
-  const debouncedSearch = useDebounce(searchTerm, 500);
+  const [months, setMonths] = useState<MonthState[]>([]);
+  const [globalError, setGlobalError] = useState<string | null>(null);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    error,
-  } = useInfiniteQuery({
-    queryKey: [
-      "transactions",
-      session?.accessToken,
-      debouncedSearch,
-      dateRange.start,
-      dateRange.end,
-    ],
-    queryFn: async ({ pageParam = 1 }) => {
-      if (debouncedSearch.trim()) {
-        return searchForTransactions(
-          session?.accessToken!,
-          debouncedSearch,
-          dateRange.start || undefined,
-          dateRange.end || undefined,
-          pageParam,
-          limit
-        );
-      } else {
-        return getTransactions(
-          session?.accessToken!,
-          pageParam,
-          limit,
-          dateRange.start || undefined,
-          dateRange.end || undefined
-        );
-      }
-    },
-    getNextPageParam: (lastPage, allPages) => {
-      if (lastPage.data.length < limit) return undefined;
-      return allPages.length + 1;
-    },
-    enabled: !!session?.accessToken,
-    initialPageParam: 1,
-  });
+  const getMonthRange = (year: number, month: number) => {
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0);
+    const formatDate = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+        d.getDate()
+      ).padStart(2, "0")}`;
+    return {
+      startDate: formatDate(start),
+      endDate: formatDate(end),
+    };
+  };
+
+  const monthLabel = (year: number, month: number) =>
+    new Date(year, month, 1).toLocaleString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+
+  const initCurrentMonth = (): MonthState => {
+    const now = new Date();
+    return {
+      year: now.getFullYear(),
+      month: now.getMonth(),
+      pages: [],
+      page: 0,
+      hasNext: true,
+      isLoading: false,
+    };
+  };
+
+  useEffect(() => {
+    if (!session?.accessToken) return;
+    setMonths([initCurrentMonth()]);
+  }, [session?.accessToken]);
+
+  const loadMonthPage = async (monthIndex: number) => {
+    if (!session?.accessToken) return;
+
+    setMonths((prev) =>
+      prev.map((m, i) =>
+        i === monthIndex ? { ...m, isLoading: true, error: undefined } : m
+      )
+    );
+
+    const target = months[monthIndex];
+    if (!target) return;
+
+    const nextPage = target.page + 1;
+    const { startDate, endDate } = getMonthRange(target.year, target.month);
+
+    try {
+      const data = await getTransactions(
+        session.accessToken,
+        nextPage,
+        limit,
+        startDate,
+        endDate
+      );
+      setMonths((prev) =>
+        prev.map((m, i) =>
+          i === monthIndex
+            ? {
+                ...m,
+                pages: [...m.pages, data.data],
+                page: nextPage,
+                hasNext: data.data.length >= limit,
+                isLoading: false,
+                balance: data.balance,
+              }
+            : m
+        )
+      );
+    } catch (error: any) {
+      setMonths((prev) =>
+        prev.map((m, i) =>
+          i === monthIndex
+            ? { ...m, isLoading: false, error: error?.message ?? "Error" }
+            : m
+        )
+      );
+      setGlobalError(error?.message ?? "Failed to load transactions.");
+    }
+  };
+
+  useEffect(() => {
+    if (!months.length) return;
+    const lastIndex = months.length - 1;
+    const last = months[lastIndex];
+    if (last.pages.length === 0 && last.hasNext && !last.isLoading) {
+      loadMonthPage(lastIndex);
+    }
+  }, [months]);
 
   useEffect(() => {
     const handleScroll = () => {
       if (
         window.innerHeight + window.scrollY >=
-          document.body.offsetHeight - 500 &&
-        hasNextPage &&
-        !isFetchingNextPage
+          document.body.offsetHeight - 500
       ) {
-        fetchNextPage();
+        const lastIndex = months.length - 1;
+        const last = months[lastIndex];
+        if (last && last.hasNext && !last.isLoading) {
+          loadMonthPage(lastIndex);
+        }
       }
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [months]);
 
   useEffect(() => {
     const checkPageHeight = () => {
       if (
-        window.innerHeight >= document.body.offsetHeight - 500 &&
-        hasNextPage &&
-        !isFetchingNextPage
+        window.innerHeight >= document.body.offsetHeight - 500
       ) {
-        fetchNextPage();
+        const lastIndex = months.length - 1;
+        const last = months[lastIndex];
+        if (last && last.hasNext && !last.isLoading) {
+          loadMonthPage(lastIndex);
+        }
       }
     };
     checkPageHeight();
     window.addEventListener("resize", checkPageHeight);
     return () => window.removeEventListener("resize", checkPageHeight);
-  }, [data, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [months]);
 
-  const transactions = data?.pages.flatMap((page) => page.data) || [];
+  const transactions = months.flatMap((m) => m.pages.flat());
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((transaction) => {
@@ -122,7 +186,13 @@ export default function TransactionHistoryPage() {
       if (selectedStatus !== "all" && transaction.status !== selectedStatus) {
         return false;
       }
-
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase();
+        const haystack = `${transaction.regime_name ?? ""} ${transaction.id ?? ""}`.toLowerCase();
+        if (!haystack.includes(term)) {
+          return false;
+        }
+      }
       return true;
     });
   }, [transactions, selectedStatus, searchTerm, dateRange]);
@@ -137,7 +207,8 @@ export default function TransactionHistoryPage() {
     setShowDateFilter(false);
   };
 
-  const availableBalance = Number(data?.pages?.[0]?.balance ?? 0);
+  const availableBalance = Number(months[0]?.balance ?? 0);
+  const totalDisplayedTransactions = filteredTransactions.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -172,7 +243,7 @@ export default function TransactionHistoryPage() {
               <div>
                 <div className="text-sm text-gray-600">Total Transactions</div>
                 <div className="text-xl font-bold">
-                  {filteredTransactions.length}
+                  {totalDisplayedTransactions}
                 </div>
               </div>
             </div>
@@ -322,7 +393,7 @@ export default function TransactionHistoryPage() {
 
       {/* Transactions List */}
       <main className="max-w-5xl mx-auto px-4 py-6">
-        {isLoading ? (
+        {months.length === 0 || months[0].isLoading ? (
           <div className="mt-6 space-y-4">
             {[1, 2, 3].map((i) => (
               <div
@@ -331,12 +402,12 @@ export default function TransactionHistoryPage() {
               />
             ))}
           </div>
-        ) : error ? (
+        ) : globalError ? (
           <div className="text-center text-red-500">
             Failed to load transactions.
           </div>
         ) : filteredTransactions.length === 0 &&
-          data?.pages[0]?.data.length === 0 ? (
+          months[0]?.pages?.[0]?.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="w-20 h-20 bg-[#5850EC]/10 rounded-full flex items-center justify-center mb-4">
               <CreditCard className="w-10 h-10 text-[#5850EC]" />
@@ -352,124 +423,162 @@ export default function TransactionHistoryPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredTransactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                onClick={() => handleTransactionClick(transaction)}
-                className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
-                    {/* Transaction Icon */}
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                      {getTransactionIcon(
-                        transaction.transaction_action,
-                        transaction.transaction_type
-                      )}
+            {months.map((month, monthIndex) => {
+              const monthTransactions = month.pages.flat();
+              const filteredMonthTransactions = monthTransactions.filter(
+                (transaction) =>
+                  filteredTransactions.find((t) => t.id === transaction.id)
+              );
+              if (filteredMonthTransactions.length === 0 && monthIndex !== 0) {
+                return null;
+              }
+              return (
+                <div key={`${month.year}-${month.month}`}>
+                  {filteredMonthTransactions.length > 0 && (
+                    <div className="flex justify-end text-sm text-gray-500 mb-2">
+                      {monthLabel(month.year, month.month)}
                     </div>
+                  )}
+                  <div className="space-y-4">
+                    {filteredMonthTransactions.map((transaction) => (
+                      <div
+                        key={transaction.id}
+                        onClick={() => handleTransactionClick(transaction)}
+                        className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            {/* Transaction Icon */}
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                              {getTransactionIcon(
+                                transaction.transaction_action,
+                                transaction.transaction_type
+                              )}
+                            </div>
 
-                    {/* Transaction Details */}
-                    <div className="flex-1 min-w-0">
-                      <div className="mb-2">
-                        <h3 className="font-semibold text-base sm:text-lg mb-1 truncate">
-                          {transaction.regime_name}
-                        </h3>
-                        <p className="text-gray-600 text-sm">
-                          {isAffiliate(
-                            transaction.client_id,
-                            transaction?.beneficiary
-                          )
-                            ? "Affiliate"
-                            : formatActionText(transaction.transaction_action)}
-                        </p>
+                            {/* Transaction Details */}
+                            <div className="flex-1 min-w-0">
+                              <div className="mb-2">
+                                <h3 className="font-semibold text-base sm:text-lg mb-1 truncate">
+                                  {transaction.regime_name}
+                                </h3>
+                                <p className="text-gray-600 text-sm">
+                                  {isAffiliate(
+                                    transaction.client_id,
+                                    transaction?.beneficiary
+                                  )
+                                    ? "Affiliate"
+                                    : formatActionText(
+                                        transaction.transaction_action
+                                      )}
+                                </p>
+                              </div>
+
+                              <div className="flex flex-col sm:hidden gap-2 mb-3">
+                                <div
+                                  className={`text-lg font-bold ${
+                                    transaction.transaction_type ===
+                                    "inter-credit"
+                                      ? "text-green-600"
+                                      : "text-gray-900"
+                                  }`}
+                                >
+                                  {transaction.transaction_type ===
+                                  "inter-credit"
+                                    ? "+"
+                                    : "-"}
+                                  {formatAmount(
+                                    transaction.actual_amount,
+                                    transaction.currency
+                                  )}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {formatDate(transaction.created_at)}
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                                      transaction.status
+                                    )}`}
+                                  >
+                                    {getStatusIcon(transaction.status)}
+                                    {transaction.status.charAt(0).toUpperCase() +
+                                      transaction.status.slice(1)}
+                                  </span>
+                                  <span className="text-xs sm:text-sm text-gray-500">
+                                    via {transaction.payment_gateway}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between sm:justify-end">
+                                  <span className="text-xs text-gray-500 sm:hidden">
+                                    ID: {transaction.id.slice(-8)}
+                                  </span>
+                                  <span className="hidden sm:inline text-sm text-gray-500">
+                                    ID: {transaction.id}
+                                  </span>
+                                  <button className="text-[#5850EC] hover:text-[#6C63FF] transition-colors ml-2">
+                                    <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Amount - Desktop Only */}
+                          <div className="hidden sm:block text-right flex-shrink-0">
+                            <div
+                              className={`text-lg font-bold ${
+                                transaction.transaction_type === "inter-credit"
+                                  ? "text-green-600"
+                                  : "text-gray-900"
+                              }`}
+                            >
+                              {transaction.transaction_type === "inter-credit"
+                                ? "+"
+                                : "-"}
+                              {formatAmount(
+                                transaction.actual_amount,
+                                transaction.currency
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {formatDate(transaction.created_at)}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-
-                      <div className="flex flex-col sm:hidden gap-2 mb-3">
-                        <div
-                          className={`text-lg font-bold ${
-                            transaction.transaction_type === "inter-credit"
-                              ? "text-green-600"
-                              : "text-gray-900"
-                          }`}
-                        >
-                          {transaction.transaction_type === "inter-credit"
-                            ? "+"
-                            : "-"}
-                          {formatAmount(
-                            transaction.actual_amount,
-                            transaction.currency
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {formatDate(transaction.created_at)}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                              transaction.status
-                            )}`}
-                          >
-                            {getStatusIcon(transaction.status)}
-                            {transaction.status.charAt(0).toUpperCase() +
-                              transaction.status.slice(1)}
-                          </span>
-                          <span className="text-xs sm:text-sm text-gray-500">
-                            via {transaction.payment_gateway}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between sm:justify-end">
-                          <span className="text-xs text-gray-500 sm:hidden">
-                            ID: {transaction.id.slice(-8)}
-                          </span>
-                          <span className="hidden sm:inline text-sm text-gray-500">
-                            ID: {transaction.id}
-                          </span>
-                          <button className="text-[#5850EC] hover:text-[#6C63FF] transition-colors ml-2">
-                            <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Amount - Desktop Only */}
-                  <div className="hidden sm:block text-right flex-shrink-0">
-                    <div
-                      className={`text-lg font-bold ${
-                        transaction.transaction_type === "inter-credit"
-                          ? "text-green-600"
-                          : "text-gray-900"
-                      }`}
-                    >
-                      {transaction.transaction_type === "inter-credit"
-                        ? "+"
-                        : "-"}
-                      {formatAmount(
-                        transaction.actual_amount,
-                        transaction.currency
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {formatDate(transaction.created_at)}
-                    </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              );
+            })}
 
-        {isFetchingNextPage && (
-          <div className="mt-6 space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={`loading-${i}`}
-                className="h-20 bg-white rounded-lg shadow-sm animate-pulse"
-              />
-            ))}
+            {months.length > 0 && !months[months.length - 1].hasNext && (
+              <div className="flex justify-center mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const last = months[months.length - 1];
+                    const prevDate = new Date(last.year, last.month - 1, 1);
+                    const newMonth: MonthState = {
+                      year: prevDate.getFullYear(),
+                      month: prevDate.getMonth(),
+                      pages: [],
+                      page: 0,
+                      hasNext: true,
+                      isLoading: false,
+                    };
+                    setMonths((prev) => [...prev, newMonth]);
+                  }}
+                  className="px-6 py-3 rounded-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  View previous month
+                </button>
+              </div>
+            )}
           </div>
         )}
       </main>
