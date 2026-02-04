@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -49,6 +49,7 @@ export default function TransactionHistoryPage() {
 
   const [months, setMonths] = useState<MonthState[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const monthsRef = useRef<MonthState[]>([]);
 
   const getMonthRange = (year: number, month: number) => {
     const start = new Date(year, month, 1);
@@ -86,8 +87,15 @@ export default function TransactionHistoryPage() {
     setMonths([initCurrentMonth()]);
   }, [session?.accessToken]);
 
+  useEffect(() => {
+    monthsRef.current = months;
+  }, [months]);
+
   const loadMonthPage = async (monthIndex: number) => {
     if (!session?.accessToken) return;
+
+    const current = monthsRef.current[monthIndex];
+    if (!current || current.isLoading || !current.hasNext) return;
 
     setMonths((prev) =>
       prev.map((m, i) =>
@@ -95,7 +103,7 @@ export default function TransactionHistoryPage() {
       )
     );
 
-    const target = months[monthIndex];
+    const target = monthsRef.current[monthIndex];
     if (!target) return;
 
     const nextPage = target.page + 1;
@@ -150,8 +158,8 @@ export default function TransactionHistoryPage() {
         window.innerHeight + window.scrollY >=
           document.body.offsetHeight - 500
       ) {
-        const lastIndex = months.length - 1;
-        const last = months[lastIndex];
+        const lastIndex = monthsRef.current.length - 1;
+        const last = monthsRef.current[lastIndex];
         if (last && last.hasNext && !last.isLoading) {
           loadMonthPage(lastIndex);
         }
@@ -159,15 +167,15 @@ export default function TransactionHistoryPage() {
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [months]);
+  }, []);
 
   useEffect(() => {
     const checkPageHeight = () => {
       if (
         window.innerHeight >= document.body.offsetHeight - 500
       ) {
-        const lastIndex = months.length - 1;
-        const last = months[lastIndex];
+        const lastIndex = monthsRef.current.length - 1;
+        const last = monthsRef.current[lastIndex];
         if (last && last.hasNext && !last.isLoading) {
           loadMonthPage(lastIndex);
         }
@@ -176,7 +184,7 @@ export default function TransactionHistoryPage() {
     checkPageHeight();
     window.addEventListener("resize", checkPageHeight);
     return () => window.removeEventListener("resize", checkPageHeight);
-  }, [months]);
+  }, []);
 
   const transactions = months.flatMap((m) => m.pages.flat());
 
@@ -435,7 +443,7 @@ export default function TransactionHistoryPage() {
               return (
                 <div key={`${month.year}-${month.month}`}>
                   {filteredMonthTransactions.length > 0 && (
-                    <div className="flex justify-end text-sm text-gray-500 mb-2">
+                    <div className="flex justify-start text-sm text-gray-500 mb-2">
                       {monthLabel(month.year, month.month)}
                     </div>
                   )}
