@@ -21,6 +21,7 @@ export interface Transaction {
 export interface GetTransactions {
   success: boolean;
   data: Transaction[];
+  balance?: number;
   page: number;
   limit: number;
   total: number;

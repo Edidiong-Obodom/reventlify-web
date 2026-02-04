@@ -137,17 +137,7 @@ export default function TransactionHistoryPage() {
     setShowDateFilter(false);
   };
 
-  const totalAmount = filteredTransactions.reduce((sum, transaction) => {
-    if (transaction.status === "success") {
-      return transaction.transaction_type === "inter-credit" &&
-        transaction?.beneficiary === transaction?.client_id
-        ? sum + Number(transaction.actual_amount)
-        : transaction?.beneficiary === session?.user?.id
-        ? sum + Number(transaction.actual_amount)
-        : sum - Number(transaction.amount);
-    }
-    return sum;
-  }, 0);
+  const availableBalance = Number(data?.pages?.[0]?.balance ?? 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -212,12 +202,8 @@ export default function TransactionHistoryPage() {
               </div>
               <div>
                 <div className="text-sm text-gray-600">Net Amount</div>
-                <div
-                  className={`text-xl font-bold ${
-                    totalAmount >= 0 ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {formatAmount(Math.abs(totalAmount), "ngn")}
+                <div className="text-xl font-bold text-green-600">
+                  {formatAmount(availableBalance, "ngn")}
                 </div>
               </div>
             </div>
