@@ -123,7 +123,8 @@ const resolveAccessRole = (
   if (normalized === "admin") return "admin";
   if (normalized === "bouncer") return "bouncer";
   if (normalized === "usher") return "usher";
-  if (normalized === "marketer" || normalized === "affiliate") return "marketer";
+  if (normalized === "marketer" || normalized === "affiliate")
+    return "marketer";
   return "creator";
 };
 
@@ -372,7 +373,8 @@ export default function OwnerRegimeDashboardPage({
   );
   const selectedRegime = regimeSearchData?.data?.[0];
   const effectiveRole: AccessRole = resolveAccessRole(
-    participantsResponse?.data?.currentUserRole ?? selectedRegime?.participant_role,
+    participantsResponse?.data?.currentUserRole ??
+      selectedRegime?.participant_role,
   );
   const isCreatorOrSuper =
     effectiveRole === "creator" || effectiveRole === "super_admin";
@@ -397,11 +399,15 @@ export default function OwnerRegimeDashboardPage({
     canManageParticipantsByRolePreview;
   const regimeStartAt = useMemo(
     () =>
-      combineRegimeDateTime(selectedRegime?.start_date, selectedRegime?.start_time),
+      combineRegimeDateTime(
+        selectedRegime?.start_date,
+        selectedRegime?.start_time,
+      ),
     [selectedRegime?.start_date, selectedRegime?.start_time],
   );
   const regimeEndAt = useMemo(
-    () => combineRegimeDateTime(selectedRegime?.end_date, selectedRegime?.end_time),
+    () =>
+      combineRegimeDateTime(selectedRegime?.end_date, selectedRegime?.end_time),
     [selectedRegime?.end_date, selectedRegime?.end_time],
   );
   const computedStatus = useMemo<RegimeStatus>(() => {
@@ -1340,9 +1346,8 @@ export default function OwnerRegimeDashboardPage({
           </section>
         )}
 
-        {(computedStatus === "ongoing" ||
-          computedStatus === "ended" ||
-          isBouncerOrUsher) && (
+        {/* Attendance section */}
+        {
           <section className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <button
               onClick={() => setShowAttendanceDetails((prev) => !prev)}
@@ -1363,51 +1368,51 @@ export default function OwnerRegimeDashboardPage({
               />
             </button>
 
-            {computedStatus === "upcoming" ? (
+            {/** {computedStatus === "upcoming" ? (
               <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
                 Attendance metrics will be available after event check-in
                 starts.
               </div>
-            ) : (
-              showAttendanceDetails && (
-                <div className="mt-4 space-y-3">
-                  {isAttendanceSummaryError && (
-                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                      {attendanceSummaryError instanceof Error
-                        ? attendanceSummaryError.message
-                        : "Failed to load attendance summary."}
-                    </div>
-                  )}
-                  {isAttendanceSummaryLoading && (
-                    <p className="text-sm text-gray-500">
-                      Loading attendance data...
-                    </p>
-                  )}
-                  <div className="grid lg:grid-cols-3 gap-4">
-                    <AttendanceCard
-                      label={`Present (${presentCount})`}
-                      names={presentPreviewNames}
-                      tone="text-emerald-700 bg-emerald-50 border-emerald-200"
-                      href={`/regimes/${regimeId}/attendance?filter=present`}
-                    />
-                    <AttendanceCard
-                      label={`Stepped Out (${steppedOutCount})`}
-                      names={steppedOutPreviewNames}
-                      tone="text-amber-700 bg-amber-50 border-amber-200"
-                      href={`/regimes/${regimeId}/attendance?filter=stepped-out`}
-                    />
-                    <AttendanceCard
-                      label={`Yet To Attend (${yetToAttendCount})`}
-                      names={yetToAttendPreviewNames}
-                      tone="text-slate-700 bg-slate-50 border-slate-200"
-                      href={`/regimes/${regimeId}/attendance?filter=yet-to-attend`}
-                    />
-                  </div>
+            ) : ( **/}
+            {/* showAttendanceDetails && ( */}
+            <div className="mt-4 space-y-3">
+              {isAttendanceSummaryError && (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  {attendanceSummaryError instanceof Error
+                    ? attendanceSummaryError.message
+                    : "Failed to load attendance summary."}
                 </div>
-              )
-            )}
+              )}
+              {isAttendanceSummaryLoading && (
+                <p className="text-sm text-gray-500">
+                  Loading attendance data...
+                </p>
+              )}
+              <div className="grid lg:grid-cols-3 gap-4">
+                <AttendanceCard
+                  label={`Present (${presentCount})`}
+                  names={presentPreviewNames}
+                  tone="text-emerald-700 bg-emerald-50 border-emerald-200"
+                  href={`/regimes/${regimeId}/attendance?filter=present`}
+                />
+                <AttendanceCard
+                  label={`Stepped Out (${steppedOutCount})`}
+                  names={steppedOutPreviewNames}
+                  tone="text-amber-700 bg-amber-50 border-amber-200"
+                  href={`/regimes/${regimeId}/attendance?filter=stepped-out`}
+                />
+                <AttendanceCard
+                  label={`Yet To Attend (${yetToAttendCount})`}
+                  names={yetToAttendPreviewNames}
+                  tone="text-slate-700 bg-slate-50 border-slate-200"
+                  href={`/regimes/${regimeId}/attendance?filter=yet-to-attend`}
+                />
+              </div>
+            </div>
+            {/* ) */}
+            {/** )} **/}
           </section>
-        )}
+        }
 
         {canSeeFinancialData && (
           <section className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
