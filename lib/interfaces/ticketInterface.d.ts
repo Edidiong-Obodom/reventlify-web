@@ -27,6 +27,7 @@ export interface Ticket {
       creator: {
         id: string;
         user_name: string;
+        email: string;
       };
     };
   };

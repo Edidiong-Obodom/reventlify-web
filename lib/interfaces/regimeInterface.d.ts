@@ -42,6 +42,7 @@ export interface Regime {
   regime_gallery: string[];
   total_ticket_sales: string;
   total_revenue: string;
+  participant_role?: string | null;
   pricings: Pricing[];
   is_bookmarked?: boolean;
 }

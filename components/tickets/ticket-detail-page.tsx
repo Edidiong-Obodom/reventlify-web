@@ -12,6 +12,7 @@ import {
   Send,
   Ticket,
   AlertCircle,
+  Mail,
 } from "lucide-react";
 import ImageFallback from "../image-fallback";
 import {
@@ -48,7 +49,7 @@ export default function TicketDetailPage() {
         undefined,
         undefined,
         1,
-        1
+        1,
       ),
   });
 
@@ -131,7 +132,7 @@ export default function TicketDetailPage() {
         {/* Status Banner */}
         <div
           className={`flex items-center gap-3 p-4 rounded-xl border mb-6 ${getDetailsStatusColor(
-            ticketDetail.pricing.regime.status
+            ticketDetail.pricing.regime.status,
           )}`}
         >
           {getStatusIcon(ticketDetail.pricing.regime.status)}
@@ -148,14 +149,20 @@ export default function TicketDetailPage() {
                 "This event has concluded"}
             </div>
           </div>
-          {ticketDetail.is_transferred && (
-            <div className="ml-auto">
+        </div>
+        {ticketDetail.is_transferred && (
+          <div className="my-4">
+            {ticketDetail.buyer_id === session?.user?.id ? (
               <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
                 Transferred
               </span>
-            </div>
-          )}
-        </div>
+            ) : (
+              <span className="px-3 py-1 bg-blue-100 text-green-800 text-sm font-medium rounded-full">
+                Received
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Ticket Card */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
@@ -192,29 +199,31 @@ export default function TicketDetailPage() {
           </div>
 
           {/* QR Code Section */}
-          <div className="p-6 border-b bg-gradient-to-r from-[#5850EC]/5 to-[#6C63FF]/5">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0">
-                <div className="w-32 h-32 bg-white rounded-xl border-2 border-dashed border-[#5850EC]/30 flex items-center justify-center">
-                  {/* <QrCode className="w-16 h-16 text-[#5850EC]" /> */}
-                  <div ref={ref} />
+          {ticketDetail.owner_id === session?.user.id && (
+            <div className="p-6 border-b bg-gradient-to-r from-[#5850EC]/5 to-[#6C63FF]/5">
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="flex-shrink-0">
+                  <div className="w-32 h-32 bg-white rounded-xl border-2 border-dashed border-[#5850EC]/30 flex items-center justify-center">
+                    {/* <QrCode className="w-16 h-16 text-[#5850EC]" /> */}
+                    <div ref={ref} />
+                  </div>
                 </div>
-              </div>
-              <div className="flex-1 text-center md:text-left">
-                <h3 className="text-lg font-semibold mb-2">
-                  Your Digital Ticket
-                </h3>
-                <p className="text-gray-600 mb-3">
-                  Show this QR code at the venue entrance for quick check-in
-                </p>
-                <div className="bg-white rounded-lg p-3 inline-block">
-                  <div className="font-mono text-sm text-gray-800">
-                    {ticketDetail.id}
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="text-lg font-semibold mb-2">
+                    Your Digital Ticket
+                  </h3>
+                  <p className="text-gray-600 mb-3">
+                    Show this QR code at the venue entrance for quick check-in
+                  </p>
+                  <div className="bg-white rounded-lg p-3 inline-block">
+                    <div className="font-mono text-sm text-gray-800">
+                      {ticketDetail.id}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Ticket Details */}
           <div className="p-6">
@@ -241,9 +250,19 @@ export default function TicketDetailPage() {
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4" />
                       <span>
-                        Organized by @
-                        {ticketDetail.pricing.regime.creator.user_name}
+                        Organized by
+                        <Link
+                          href={`/profile/${ticketDetail.pricing.regime.creator.id}`}
+                          className="text-blue-600"
+                        >
+                          {" "}
+                          @{ticketDetail.pricing.regime.creator.user_name}
+                        </Link>
                       </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      <span> {ticketDetail.pricing.regime.creator.email}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Ticket className="w-4 h-4" />
@@ -315,12 +334,16 @@ export default function TicketDetailPage() {
                       <span>Status:</span>
                       <span
                         className={`font-medium ${
-                          ticketDetail.is_transferred
+                          ticketDetail.is_transferred &&
+                          ticketDetail.owner_id !== session?.user.id
                             ? "text-blue-600"
                             : "text-green-600"
                         }`}
                       >
-                        {ticketDetail.is_transferred ? "Transferred" : "Active"}
+                        {ticketDetail.is_transferred &&
+                        ticketDetail.owner_id !== session?.user.id
+                          ? "Transferred"
+                          : "Active"}
                       </span>
                     </div>
                   </div>
@@ -366,7 +389,7 @@ export default function TicketDetailPage() {
 
           <Link
             href={`/events/view/${slugify(
-              ticketDetail.pricing.regime.name as string
+              ticketDetail.pricing.regime.name as string,
             )}`}
           >
             <button className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 py-3 px-4 rounded-xl hover:bg-gray-50 transition-colors">
@@ -390,9 +413,12 @@ export default function TicketDetailPage() {
             </li>
             <li>
               • Tickets are non-refundable but can be transferred to another
-              person
+              person by the buyer
             </li>
-            <li>• Contact the organizer for any event-specific inquiries</li>
+            <li>
+              • Contact the organizer for any event-specific inquiries.
+              Organizer's email is the only email on the ticket.
+            </li>
           </ul>
         </div>
       </main>

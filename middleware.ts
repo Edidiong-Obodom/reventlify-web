@@ -36,7 +36,7 @@ export default async function middleware(req: NextRequest) {
 
   // 4. Redirect
   if (
-    (isProtectedRoute || path === "/profile/edit" || path === "/profile") &&
+    (isProtectedRoute || path.includes("profile")) &&
     !session?.id
   ) {
     return NextResponse.redirect(new URL("/signin", req.nextUrl));

@@ -1,5 +1,15 @@
 import { ApiTicket } from "../interfaces/ticketInterface";
 
+interface TransferTicketPayload {
+  beneficiary: string;
+  ticket: string;
+  comment?: string;
+}
+
+interface TransferTicketResponse {
+  message: string;
+}
+
 export const getTickets = async (
   token: string,
   page: number = 1,
@@ -65,6 +75,27 @@ export const searchForTickets = async (
 
   if (!res.ok) {
     throw new Error("Failed to fetch transactions");
+  }
+
+  return res.json();
+};
+
+export const transferTicket = async (
+  token: string,
+  payload: TransferTicketPayload
+): Promise<TransferTicketResponse> => {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/user/tickets/transfer`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.message ?? "Failed to transfer ticket");
   }
 
   return res.json();

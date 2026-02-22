@@ -122,7 +122,7 @@ export default function OtherProfilePage() {
             <div className="flex justify-between items-start">
               <div>
                 <h2 className="text-2xl font-bold mb-2">
-                  {profile?.name ?? "User"}
+                  {profile?.name || profile?.userName || "User"}
                 </h2>
                 <div className="flex items-center gap-6 mb-4">
                   <div className="text-center">

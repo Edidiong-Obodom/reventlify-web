@@ -194,9 +194,10 @@ export const getUserRegimes = async (
   userId: string,
   page: number = 1,
   limit: number = 10,
+  participant: boolean = false,
 ): Promise<GetRegimes> => {
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/v1/user/profile/${userId}/regimes?page=${page}&limit=${limit}`,
+    `${process.env.NEXT_PUBLIC_API_URL}/v1/user/profile/${userId}/regimes?page=${page}&limit=${limit}&participant=${participant}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,

@@ -66,7 +66,7 @@ export default function TicketListPage() {
           dateRange.start || undefined,
           dateRange.end || undefined,
           pageParam,
-          limit
+          limit,
         );
       } else {
         return getTickets(
@@ -74,7 +74,7 @@ export default function TicketListPage() {
           pageParam,
           limit,
           dateRange.start || undefined,
-          dateRange.end || undefined
+          dateRange.end || undefined,
         );
       }
     },
@@ -237,21 +237,21 @@ export default function TicketListPage() {
                 key: "pending",
                 label: "Upcoming",
                 count: tickets.filter(
-                  (t) => t?.pricing?.regime?.status === "pending"
+                  (t) => t?.pricing?.regime?.status === "pending",
                 ).length,
               },
               {
                 key: "ongoing",
                 label: "Live",
                 count: tickets.filter(
-                  (t) => t?.pricing?.regime?.status === "ongoing"
+                  (t) => t?.pricing?.regime?.status === "ongoing",
                 ).length,
               },
               {
                 key: "ended",
                 label: "Past",
                 count: tickets.filter(
-                  (t) => t?.pricing?.regime?.status === "ended"
+                  (t) => t?.pricing?.regime?.status === "ended",
                 ).length,
               },
             ].map((filter) => (
@@ -327,7 +327,7 @@ export default function TicketListPage() {
                     <div className="absolute top-3 left-3">
                       <span
                         className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-                          ticket?.pricing?.regime?.status
+                          ticket?.pricing?.regime?.status,
                         )}`}
                       >
                         {getStatusText(ticket?.pricing?.regime?.status)}
@@ -335,9 +335,15 @@ export default function TicketListPage() {
                     </div>
                     {ticket?.is_transferred && (
                       <div className="absolute top-3 right-3">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                          Transferred
-                        </span>
+                        {ticket.buyer_id === session?.user?.id ? (
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                            Transferred
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 bg-blue-100 text-green-800 text-xs font-medium rounded-full">
+                            Received
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
