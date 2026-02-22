@@ -157,6 +157,23 @@ export interface DashboardAttendanceActionResponse {
   };
 }
 
+type DashboardApiError = Error & {
+  status?: number;
+  currentUserRole?: string | null;
+};
+
+const buildDashboardApiError = async (
+  res: Response,
+  fallbackMessage: string,
+): Promise<DashboardApiError> => {
+  const data = await res.json().catch(() => null);
+  const error = new Error(data?.message ?? fallbackMessage) as DashboardApiError;
+  error.status = res.status;
+  error.currentUserRole =
+    data?.data?.currentUserRole ?? data?.currentUserRole ?? null;
+  return error;
+};
+
 export const getDashboardTicketPerformance = async (
   token: string,
   params: {
@@ -184,8 +201,10 @@ export const getDashboardTicketPerformance = async (
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.message ?? "Failed to fetch dashboard ticket performance");
+    throw await buildDashboardApiError(
+      res,
+      "Failed to fetch dashboard ticket performance",
+    );
   }
 
   return res.json();
@@ -206,17 +225,10 @@ export const getDashboardParticipants = async (
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    const error = new Error(
-      data?.message ?? "Failed to fetch dashboard participants",
-    ) as Error & {
-      status?: number;
-      currentUserRole?: string | null;
-    };
-    error.status = res.status;
-    error.currentUserRole =
-      data?.data?.currentUserRole ?? data?.currentUserRole ?? null;
-    throw error;
+    throw await buildDashboardApiError(
+      res,
+      "Failed to fetch dashboard participants",
+    );
   }
 
   return res.json();
@@ -243,8 +255,10 @@ export const createDashboardParticipant = async (
   );
 
   if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.message ?? "Failed to save dashboard participant");
+    throw await buildDashboardApiError(
+      res,
+      "Failed to save dashboard participant",
+    );
   }
 
   return res.json();
@@ -271,8 +285,10 @@ export const updateDashboardParticipant = async (
   );
 
   if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.message ?? "Failed to update dashboard participant");
+    throw await buildDashboardApiError(
+      res,
+      "Failed to update dashboard participant",
+    );
   }
 
   return res.json();
@@ -298,8 +314,10 @@ export const removeDashboardParticipant = async (
   );
 
   if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.message ?? "Failed to remove dashboard participant");
+    throw await buildDashboardApiError(
+      res,
+      "Failed to remove dashboard participant",
+    );
   }
 
   return res.json();
@@ -332,8 +350,10 @@ export const getDashboardTransactions = async (
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.message ?? "Failed to fetch dashboard transactions");
+    throw await buildDashboardApiError(
+      res,
+      "Failed to fetch dashboard transactions",
+    );
   }
 
   return res.json();
@@ -362,8 +382,10 @@ export const getDashboardAttendanceList = async (
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.message ?? "Failed to fetch dashboard attendance");
+    throw await buildDashboardApiError(
+      res,
+      "Failed to fetch dashboard attendance",
+    );
   }
 
   return res.json();
@@ -394,8 +416,10 @@ export const searchDashboardAttendance = async (
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.message ?? "Failed to search dashboard attendance");
+    throw await buildDashboardApiError(
+      res,
+      "Failed to search dashboard attendance",
+    );
   }
 
   return res.json();
@@ -422,8 +446,10 @@ export const dashboardAttendanceAction = async (
   );
 
   if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.message ?? "Failed to perform attendance action");
+    throw await buildDashboardApiError(
+      res,
+      "Failed to perform attendance action",
+    );
   }
 
   return res.json();

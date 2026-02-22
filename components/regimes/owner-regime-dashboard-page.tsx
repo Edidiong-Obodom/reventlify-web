@@ -77,6 +77,10 @@ type ParticipantState = {
   usher: ParticipantMember[];
   marketer: ParticipantMember[];
 };
+type QueryErrorWithStatus = Error & {
+  status?: number;
+  currentUserRole?: string | null;
+};
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
@@ -101,6 +105,12 @@ const addDays = (date: Date, days: number) => {
   next.setDate(next.getDate() + days);
   next.setHours(0, 0, 0, 0);
   return next;
+};
+
+const retryUnlessForbidden = (failureCount: number, error: unknown) => {
+  const status = (error as QueryErrorWithStatus)?.status;
+  if (status === 403) return false;
+  return failureCount < 2;
 };
 
 const combineRegimeDateTime = (
@@ -189,9 +199,10 @@ export default function OwnerRegimeDashboardPage({
         regimeId,
       }),
     enabled: !!session?.accessToken && !!regimeId,
+    retry: retryUnlessForbidden,
   });
   const participantRoleFromError = (
-    participantsError as Error & { currentUserRole?: string | null }
+    participantsError as QueryErrorWithStatus
   )?.currentUserRole;
   const resolvedRoleValue =
     participantsResponse?.data?.currentUserRole ?? participantRoleFromError;
@@ -281,6 +292,7 @@ export default function OwnerRegimeDashboardPage({
     queryFn: () =>
       searchForRegimes({ searchString: regimeId, page: 1, limit: 1 }),
     enabled: !!regimeId,
+    retry: retryUnlessForbidden,
   });
   const pricingOptions = useMemo(
     () => regimeSearchData?.data?.[0]?.pricings ?? [],
@@ -375,6 +387,7 @@ export default function OwnerRegimeDashboardPage({
         toDate: weeklyToDate,
       }),
     enabled: !!session?.accessToken && !!regimeId,
+    retry: retryUnlessForbidden,
   });
 
   const soldProgress = ticketPerformanceResponse?.data?.soldProgress;
@@ -399,6 +412,7 @@ export default function OwnerRegimeDashboardPage({
         duration: "all_time",
       }),
     enabled: !!session?.accessToken && !!regimeId,
+    retry: retryUnlessForbidden,
   });
   const allTimeSoldTickets =
     allTimeTicketPerformanceResponse?.data?.soldProgress?.sold ?? 0;
@@ -419,6 +433,7 @@ export default function OwnerRegimeDashboardPage({
         limit: 20,
       }),
     enabled: !!session?.accessToken && !!regimeId,
+    retry: retryUnlessForbidden,
   });
   const transactionSummary = dashboardTransactionsResponse?.data?.summary;
   const totalTransactions = transactionSummary?.totalTransactions ?? 0;
@@ -457,6 +472,7 @@ export default function OwnerRegimeDashboardPage({
         limit: 1,
       }),
     enabled: !!session?.accessToken && !!regimeId,
+    retry: retryUnlessForbidden,
   });
   const { data: presentPreviewResponse } = useQuery({
     queryKey: [
@@ -473,6 +489,7 @@ export default function OwnerRegimeDashboardPage({
         filters: ["present"],
       }),
     enabled: !!session?.accessToken && !!regimeId,
+    retry: retryUnlessForbidden,
   });
   const { data: steppedOutPreviewResponse } = useQuery({
     queryKey: [
@@ -489,6 +506,7 @@ export default function OwnerRegimeDashboardPage({
         filters: ["stepped-out"],
       }),
     enabled: !!session?.accessToken && !!regimeId,
+    retry: retryUnlessForbidden,
   });
   const { data: yetToAttendPreviewResponse } = useQuery({
     queryKey: [
@@ -505,6 +523,7 @@ export default function OwnerRegimeDashboardPage({
         filters: ["yet-to-attend"],
       }),
     enabled: !!session?.accessToken && !!regimeId,
+    retry: retryUnlessForbidden,
   });
   const attendanceSummary = attendanceSummaryResponse?.summary;
   const presentCount = attendanceSummary?.present ?? 0;
