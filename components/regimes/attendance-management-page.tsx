@@ -4,6 +4,15 @@ import Link from "next/link";
 import { ArrowLeft, Camera, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { useSession } from "next-auth/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useDebounce } from "@/hooks/useDebounce";
+import {
+  dashboardAttendanceAction,
+  DashboardAttendanceFilter,
+  getDashboardAttendanceList,
+  searchDashboardAttendance,
+} from "@/lib/api/dashboard";
 
 interface AttendanceManagementPageProps {
   regimeId: string;
@@ -17,6 +26,7 @@ type AttendanceRow = {
   name: string;
   email: string;
   ticketId: string;
+  pricingName: string;
   status: AttendanceStatusKey;
   lastAction: string;
 };
@@ -64,14 +74,37 @@ type BarcodeDetectorCtor = {
   };
 };
 
+const parseScannedTicketPayload = (raw: string) => {
+  const normalized = raw.trim();
+  if (!normalized) return null;
+
+  // New format: timestamp:ticketId. Keep legacy support for raw ticketId.
+  const parts = normalized.split(":");
+  if (parts.length < 2) {
+    return { ticketId: normalized, timestamp: null as number | null };
+  }
+
+  const timestamp = Number(parts[0]);
+  const ticketId = parts.slice(1).join(":").trim();
+  if (!ticketId) return null;
+
+  return {
+    ticketId,
+    timestamp: Number.isFinite(timestamp) ? timestamp : null,
+  };
+};
+
 export default function AttendanceManagementPage({
   regimeId,
   initialFilter,
 }: Readonly<AttendanceManagementPageProps>) {
+  const { data: session } = useSession();
+  const queryClient = useQueryClient();
   const [activeFilters, setActiveFilters] = useState<AttendanceStatusKey[]>(
     initialFilter ? [toStatusKey(initialFilter)] : ALL_STATUSES,
   );
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400);
   const [currentPage, setCurrentPage] = useState(1);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isStartingScanner, setIsStartingScanner] = useState(false);
@@ -81,34 +114,7 @@ export default function AttendanceManagementPage({
   const streamRef = useRef<MediaStream | null>(null);
   const rafIdRef = useRef<number | null>(null);
   const detectorRef = useRef<InstanceType<BarcodeDetectorCtor> | null>(null);
-
-  const seededRows = useMemo(() => {
-    const buildRows = (status: AttendanceStatusKey, count: number) =>
-      Array.from({ length: count }).map((_, idx) => {
-        const serial = (idx + 1).toString().padStart(3, "0");
-        return {
-          id: `${status}-${serial}`,
-          name: `${STATUS_META[status].title} Attendee ${serial}`,
-          email: `attendee${serial}.${status.replace(/-/g, "")}@mail.com`,
-          ticketId: `TKT-${regimeId.slice(0, 4).toUpperCase()}-${serial}`,
-          status,
-          lastAction:
-            status === "present"
-              ? "Checked in"
-              : status === "stepped-out"
-                ? "Stepped out"
-                : "Pending check-in",
-        } as AttendanceRow;
-      });
-
-    return [
-      ...buildRows("present", 154),
-      ...buildRows("stepped-out", 41),
-      ...buildRows("yet-to-attend", 223),
-    ];
-  }, [regimeId]);
-
-  const [allRows, setAllRows] = useState<AttendanceRow[]>(seededRows);
+  const lastScannedRef = useRef<{ rawValue: string; at: number } | null>(null);
 
   useEffect(() => {
     setActiveFilters(initialFilter ? [toStatusKey(initialFilter)] : ALL_STATUSES);
@@ -116,40 +122,86 @@ export default function AttendanceManagementPage({
   }, [initialFilter]);
 
   useEffect(() => {
-    setAllRows(seededRows);
     setCurrentPage(1);
-  }, [seededRows]);
+  }, [debouncedSearch, activeFilters]);
 
-  const rowsForFilter = useMemo(
-    () => allRows.filter((row) => activeFilters.includes(row.status)),
-    [allRows, activeFilters],
+  const filtersParam = useMemo(
+    () => activeFilters as DashboardAttendanceFilter[],
+    [activeFilters],
   );
 
-  const filteredRows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return rowsForFilter;
-    return rowsForFilter.filter(
-      (row) =>
-        row.name.toLowerCase().includes(query) ||
-        row.email.toLowerCase().includes(query) ||
-        row.ticketId.toLowerCase().includes(query),
-    );
-  }, [rowsForFilter, search]);
+  const {
+    data: attendanceResponse,
+    isLoading: isAttendanceLoading,
+    isError: isAttendanceError,
+    error: attendanceError,
+  } = useQuery({
+    queryKey: [
+      "dashboard-attendance",
+      session?.accessToken,
+      regimeId,
+      currentPage,
+      PAGE_SIZE,
+      filtersParam.join(","),
+      debouncedSearch,
+    ],
+    queryFn: () => {
+      if (debouncedSearch.trim()) {
+        return searchDashboardAttendance(session?.accessToken as string, {
+          regimeId,
+          query: debouncedSearch.trim(),
+          page: currentPage,
+          limit: PAGE_SIZE,
+          filters: filtersParam,
+        });
+      }
+      return getDashboardAttendanceList(session?.accessToken as string, {
+        regimeId,
+        page: currentPage,
+        limit: PAGE_SIZE,
+        filters: filtersParam,
+      });
+    },
+    enabled: !!session?.accessToken && !!regimeId,
+  });
 
-  const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
-  const safePage = Math.min(currentPage, pageCount);
-  const pagedRows = filteredRows.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE,
+  const attendanceActionMutation = useMutation({
+    mutationFn: (payload: { scannedData: string; action: "check_in" | "step_out" }) =>
+      dashboardAttendanceAction(session?.accessToken as string, {
+        regimeId,
+        scannedData: payload.scannedData,
+        action: payload.action,
+      }),
+    onSuccess: async (response) => {
+      toast.success(response.message);
+      await queryClient.invalidateQueries({
+        queryKey: ["dashboard-attendance", session?.accessToken, regimeId],
+      });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const rows = useMemo<AttendanceRow[]>(
+    () =>
+      attendanceResponse?.data?.map((item) => ({
+        id: item.ticketId,
+        name: item.userName || "Unknown",
+        email: item.email || "No email",
+        ticketId: item.ticketId,
+        pricingName: item.pricingName,
+        status: item.status,
+        lastAction: item.lastAction,
+      })) ?? [],
+    [attendanceResponse],
   );
 
-  const allActive = activeFilters.length === ALL_STATUSES.length;
-  const selectedLabel =
-    activeFilters.length === 1
-      ? STATUS_META[activeFilters[0]].title
-      : allActive
-        ? "All"
-        : "Selected";
+  const summary = attendanceResponse?.summary ?? {
+    present: 0,
+    steppedOut: 0,
+    yetToAttend: 0,
+  };
 
   const stopScanner = () => {
     if (rafIdRef.current !== null) {
@@ -165,41 +217,35 @@ export default function AttendanceManagementPage({
     }
   };
 
-  const handleTicketScan = (ticketId: string) => {
-    const normalized = ticketId.trim();
-    if (!normalized) return;
+  const handleTicketScan = (rawPayload: string) => {
+    const parsed = parseScannedTicketPayload(rawPayload);
+    if (!parsed) return;
 
-    let found = false;
-    let alreadyCheckedIn = false;
-
-    setAllRows((prev) =>
-      prev.map((row) => {
-        if (row.ticketId !== normalized) return row;
-        found = true;
-        if (row.status === "present") {
-          alreadyCheckedIn = true;
-          return row;
-        }
-        return { ...row, status: "present", lastAction: "Checked in via QR scan" };
-      }),
-    );
-
-    if (!found) {
-      toast.error("Ticket not found for this regime.");
+    const now = Date.now();
+    const last = lastScannedRef.current;
+    if (last && last.rawValue === rawPayload && now - last.at < 2000) {
       return;
     }
-    if (alreadyCheckedIn) {
-      toast("Attendee is already checked in.");
-    } else {
-      toast.success("Attendee checked in successfully.");
+    lastScannedRef.current = { rawValue: rawPayload, at: now };
+
+    if (attendanceActionMutation.isPending) {
+      return;
     }
 
-    setActiveFilters((prev) =>
-      prev.includes("present") ? prev : [...prev, "present"],
+    attendanceActionMutation.mutate(
+      {
+        scannedData: rawPayload,
+        action: "check_in",
+      },
+      {
+        onSuccess: () => {
+          setActiveFilters((prev) =>
+            prev.includes("present") ? prev : [...prev, "present"],
+          );
+          setCurrentPage(1);
+        },
+      },
     );
-    setCurrentPage(1);
-    setIsScannerOpen(false);
-    stopScanner();
   };
 
   const startScanner = async () => {
@@ -237,7 +283,6 @@ export default function AttendanceManagementPage({
           const rawValue = codes.find((code) => code.rawValue)?.rawValue;
           if (rawValue) {
             handleTicketScan(rawValue);
-            return;
           }
         } catch {
           // Ignore per-frame decode errors.
@@ -265,6 +310,23 @@ export default function AttendanceManagementPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isScannerOpen]);
 
+  const allActive = activeFilters.length === ALL_STATUSES.length;
+  const selectedLabel =
+    activeFilters.length === 1
+      ? STATUS_META[activeFilters[0]].title
+      : allActive
+        ? "All"
+        : "Selected";
+
+  const safePage = attendanceResponse?.page ?? currentPage;
+  const pageCount = attendanceResponse?.totalPages ?? 1;
+
+  const countByStatus = (status: AttendanceStatusKey) => {
+    if (status === "present") return summary.present;
+    if (status === "stepped-out") return summary.steppedOut;
+    return summary.yetToAttend;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-10 border-b bg-white">
@@ -282,7 +344,7 @@ export default function AttendanceManagementPage({
             </div>
           </div>
           <span className="self-start sm:self-auto text-sm font-medium px-3 py-1 rounded-full bg-gray-100 text-gray-700">
-            {filteredRows.length} attendees
+            {attendanceResponse?.total ?? 0} attendees
           </span>
         </div>
       </header>
@@ -313,7 +375,7 @@ export default function AttendanceManagementPage({
                       : "text-gray-600 hover:bg-white"
                   }`}
                 >
-                  All
+                  All ({summary.present + summary.steppedOut + summary.yetToAttend})
                 </button>
                 {(Object.keys(STATUS_META) as AttendanceStatusKey[]).map((status) => {
                   const meta = STATUS_META[status];
@@ -334,7 +396,7 @@ export default function AttendanceManagementPage({
                         isActive ? meta.activeTone : "text-gray-600 hover:bg-white"
                       }`}
                     >
-                      {meta.title}
+                      {meta.title} ({countByStatus(status)})
                     </button>
                   );
                 })}
@@ -345,23 +407,31 @@ export default function AttendanceManagementPage({
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder={`Search ${selectedLabel.toLowerCase()} attendees`}
                 className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0F766E]/30"
               />
             </div>
+
+            {isAttendanceError && (
+              <p className="text-sm text-rose-600">
+                {attendanceError instanceof Error
+                  ? attendanceError.message
+                  : "Failed to load attendance."}
+              </p>
+            )}
+            {isAttendanceLoading && (
+              <p className="text-sm text-gray-500">Loading attendance...</p>
+            )}
           </div>
 
           <div className="block md:hidden p-3 space-y-3">
-            {pagedRows.length === 0 ? (
+            {rows.length === 0 ? (
               <div className="px-4 py-8 text-center text-gray-500 text-sm">
                 No attendees found.
               </div>
             ) : (
-              pagedRows.map((row) => (
+              rows.map((row) => (
                 <div key={row.id} className="rounded-xl border border-gray-100 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium text-gray-900 truncate">{row.name}</p>
@@ -375,36 +445,54 @@ export default function AttendanceManagementPage({
                   <p className="text-xs text-gray-500 font-mono mt-1 truncate">
                     {row.ticketId}
                   </p>
+                  <p className="text-xs text-gray-500 mt-1 truncate">{row.pricingName}</p>
                   <p className="text-xs text-gray-500 mt-2">{row.lastAction}</p>
+                  <div className="mt-3">
+                    <button
+                      onClick={() =>
+                        attendanceActionMutation.mutate({
+                          scannedData: `${Date.now()}:${row.ticketId}`,
+                          action: row.status === "present" ? "step_out" : "check_in",
+                        })
+                      }
+                      disabled={attendanceActionMutation.isPending}
+                      className="text-xs px-2 py-1 rounded-md border border-gray-300 hover:bg-gray-50"
+                    >
+                      {row.status === "present" ? "Mark Stepped Out" : "Check In"}
+                    </button>
+                  </div>
                 </div>
               ))
             )}
           </div>
 
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full min-w-[760px]">
+            <table className="w-full min-w-[860px]">
               <thead>
                 <tr className="border-b border-gray-100 text-left text-sm text-gray-500">
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Email</th>
                   <th className="px-4 py-3 font-medium">Ticket ID</th>
+                  <th className="px-4 py-3 font-medium">Pricing</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Last Action</th>
+                  <th className="px-4 py-3 font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {pagedRows.length === 0 ? (
+                {rows.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-8 text-center text-gray-500" colSpan={5}>
+                    <td className="px-4 py-8 text-center text-gray-500" colSpan={7}>
                       No attendees found.
                     </td>
                   </tr>
                 ) : (
-                  pagedRows.map((row) => (
+                  rows.map((row) => (
                     <tr key={row.id} className="border-b border-gray-50 text-sm">
                       <td className="px-4 py-3 text-gray-900 font-medium">{row.name}</td>
                       <td className="px-4 py-3 text-gray-600">{row.email}</td>
                       <td className="px-4 py-3 text-gray-600 font-mono">{row.ticketId}</td>
+                      <td className="px-4 py-3 text-gray-600">{row.pricingName}</td>
                       <td className="px-4 py-3">
                         <span
                           className={`text-xs px-2 py-1 rounded-full ${STATUS_META[row.status].tone}`}
@@ -413,6 +501,20 @@ export default function AttendanceManagementPage({
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{row.lastAction}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        <button
+                          onClick={() =>
+                            attendanceActionMutation.mutate({
+                              scannedData: `${Date.now()}:${row.ticketId}`,
+                              action: row.status === "present" ? "step_out" : "check_in",
+                            })
+                          }
+                          disabled={attendanceActionMutation.isPending}
+                          className="text-xs px-2 py-1 rounded-md border border-gray-300 hover:bg-gray-50"
+                        >
+                          {row.status === "present" ? "Mark Stepped Out" : "Check In"}
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -473,8 +575,7 @@ export default function AttendanceManagementPage({
               )}
               {scanError && <p className="text-sm text-red-600 mt-3">{scanError}</p>}
               <p className="text-xs text-gray-500 mt-3">
-                Point camera at attendee QR code. Ticket ID will be read and attendee
-                will be checked in automatically.
+                Point camera at attendee QR code. Ticket ID will be read for quick check-in.
               </p>
             </div>
           </div>

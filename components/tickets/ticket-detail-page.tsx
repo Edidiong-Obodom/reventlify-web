@@ -56,11 +56,13 @@ export default function TicketDetailPage() {
   // Step 1: Create QR code instance once when data is available
   useEffect(() => {
     if (data?.data?.length) {
+      const initialPayload = `${Date.now()}:${data.data[0].id}`;
+
       const styleCode = new QRCodeStyling({
         width: 120,
         height: 120,
         type: "svg",
-        data: data.data[0].id,
+        data: initialPayload,
         image: undefined, // Optional: you can add a logo later
         dotsOptions: {
           color: "#5850EC",
@@ -78,6 +80,19 @@ export default function TicketDetailPage() {
       setQrCode(styleCode);
     }
   }, [data]);
+
+  // Refresh QR payload periodically to reduce replay/screenshot abuse.
+  useEffect(() => {
+    if (!data?.data?.[0]?.id || !qrCode) return;
+
+    const updatePayload = () => {
+      const nextPayload = `${Date.now()}:${data.data[0].id}`;
+      qrCode.update({ data: nextPayload });
+    };
+
+    const timer = setInterval(updatePayload, 15000);
+    return () => clearInterval(timer);
+  }, [data, qrCode]);
 
   // Step 2: Mount QR code into DOM when `qrCode` is ready
   useEffect(() => {
