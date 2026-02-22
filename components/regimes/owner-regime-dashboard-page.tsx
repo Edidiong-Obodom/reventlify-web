@@ -172,99 +172,6 @@ export default function OwnerRegimeDashboardPage({
     name: string;
   } | null>(null);
 
-  // UI-only mock data. Replace with API data when backend endpoints are wired.
-  const dashboard = useMemo(() => {
-    const status = (["ongoing", "upcoming", "ended"] as RegimeStatus[])[0];
-    const soldTickets = 378;
-    const totalTickets = 500;
-    const ticketsLeft = totalTickets - soldTickets;
-    const grossAmount = 4_213_500;
-    const transferFees = 98_250;
-    const netAmount = grossAmount - transferFees;
-
-    const transactions: TransactionItem[] = [
-      {
-        id: "TXN-1JH9P2",
-        createdAt: new Date().toISOString(),
-        type: "ticket_sale",
-        actor: { name: "Ada Samuel", email: "ada@example.com" },
-        amount: 12500,
-        actualAmount: 12500,
-        companyCharge: 300,
-        paymentGatewayCharge: 200,
-        affiliateAmount: 500,
-        paymentGateway: "card",
-        note: "VIP ticket sale",
-      },
-      {
-        id: "TXN-1JH9P9",
-        createdAt: new Date().toISOString(),
-        type: "ticket_sale",
-        actor: { name: "Adebayo T.", email: "adebayo@example.com" },
-        amount: 8500,
-        actualAmount: 8500,
-        companyCharge: 200,
-        paymentGatewayCharge: 100,
-        affiliateAmount: 0,
-        paymentGateway: "transfer",
-        note: "Regular ticket sale",
-      },
-      {
-        id: "TXN-1JHAA2",
-        createdAt: new Date().toISOString(),
-        type: "transfer_debit",
-        actor: { name: "Reventlify Wallet", email: "" },
-        amount: 125000,
-        actualAmount: 125000,
-        companyCharge: 0,
-        paymentGatewayCharge: 0,
-        affiliateAmount: null,
-        paymentGateway: "internal",
-        note: "Payout transfer to owner bank account",
-      },
-      {
-        id: "TXN-1JHAB1",
-        createdAt: new Date().toISOString(),
-        type: "ticket_sale",
-        actor: { name: "Mariam O.", email: "mariam@example.com" },
-        amount: 8500,
-        actualAmount: 8500,
-        companyCharge: 200,
-        paymentGatewayCharge: 100,
-        affiliateAmount: 0,
-        paymentGateway: "card",
-        note: "Regular ticket sale",
-      },
-    ];
-
-    return {
-      name: "Summer Pulse Fest",
-      status,
-      soldTickets,
-      totalTickets,
-      ticketsLeft,
-      grossAmount,
-      transferFees,
-      netAmount,
-      participants: {
-        super_admin: [],
-        admin: [],
-        bouncer: [],
-        usher: [],
-        marketer: [],
-      } as ParticipantState,
-      attendance: {
-        totalCheckedIn: 211,
-        steppedOut: 19,
-        yetToAttend: 148,
-        checkedInList: ["Ada Samuel", "Adebayo T.", "Mariam O.", "Tim O."],
-        steppedOutList: ["Moses D.", "Ijeoma K."],
-        yetToAttendList: ["Tolu B.", "Nenye A.", "Hassan M."],
-      },
-      transactions,
-    };
-  }, []);
-
   const participantsQueryKey = [
     "dashboard-participants",
     session?.accessToken,
@@ -283,6 +190,9 @@ export default function OwnerRegimeDashboardPage({
       }),
     enabled: !!session?.accessToken && !!regimeId,
   });
+  const participantRoleFromError = (
+    participantsError as Error & { currentUserRole?: string | null }
+  )?.currentUserRole;
 
   const participants = useMemo<ParticipantState>(() => {
     const grouped: ParticipantState = {
@@ -374,6 +284,7 @@ export default function OwnerRegimeDashboardPage({
   const selectedRegime = regimeSearchData?.data?.[0];
   const effectiveRole: AccessRole = resolveAccessRole(
     participantsResponse?.data?.currentUserRole ??
+      participantRoleFromError ??
       selectedRegime?.participant_role,
   );
   const isCreatorOrSuper =
@@ -489,11 +400,9 @@ export default function OwnerRegimeDashboardPage({
     enabled: !!session?.accessToken && !!regimeId,
   });
   const allTimeSoldTickets =
-    allTimeTicketPerformanceResponse?.data?.soldProgress?.sold ??
-    dashboard.soldTickets;
+    allTimeTicketPerformanceResponse?.data?.soldProgress?.sold ?? 0;
   const allTimeTicketsLeft =
-    allTimeTicketPerformanceResponse?.data?.soldProgress?.left ??
-    dashboard.ticketsLeft;
+    allTimeTicketPerformanceResponse?.data?.soldProgress?.left ?? 0;
   const {
     data: dashboardTransactionsResponse,
     isLoading: isDashboardTransactionsLoading,
@@ -511,8 +420,7 @@ export default function OwnerRegimeDashboardPage({
     enabled: !!session?.accessToken && !!regimeId,
   });
   const transactionSummary = dashboardTransactionsResponse?.data?.summary;
-  const totalTransactions =
-    transactionSummary?.totalTransactions ?? dashboard.transactions.length;
+  const totalTransactions = transactionSummary?.totalTransactions ?? 0;
   const dashboardTransactions: TransactionItem[] =
     dashboardTransactionsResponse?.data?.transactions.map((txn) => ({
       id: txn.id,
@@ -533,7 +441,7 @@ export default function OwnerRegimeDashboardPage({
         (txn.type === "ticket_sale"
           ? "Ticket sale transaction"
           : "Regime transfer debit"),
-    })) ?? dashboard.transactions;
+    })) ?? [];
   const {
     data: attendanceSummaryResponse,
     isLoading: isAttendanceSummaryLoading,
@@ -598,24 +506,21 @@ export default function OwnerRegimeDashboardPage({
     enabled: !!session?.accessToken && !!regimeId,
   });
   const attendanceSummary = attendanceSummaryResponse?.summary;
-  const presentCount =
-    attendanceSummary?.present ?? dashboard.attendance.totalCheckedIn;
-  const steppedOutCount =
-    attendanceSummary?.steppedOut ?? dashboard.attendance.steppedOut;
-  const yetToAttendCount =
-    attendanceSummary?.yetToAttend ?? dashboard.attendance.yetToAttend;
+  const presentCount = attendanceSummary?.present ?? 0;
+  const steppedOutCount = attendanceSummary?.steppedOut ?? 0;
+  const yetToAttendCount = attendanceSummary?.yetToAttend ?? 0;
   const presentPreviewNames =
     presentPreviewResponse?.data
       ?.map((item) => item.userName)
-      .filter(Boolean) ?? dashboard.attendance.checkedInList;
+      .filter(Boolean) ?? [];
   const steppedOutPreviewNames =
     steppedOutPreviewResponse?.data
       ?.map((item) => item.userName)
-      .filter(Boolean) ?? dashboard.attendance.steppedOutList;
+      .filter(Boolean) ?? [];
   const yetToAttendPreviewNames =
     yetToAttendPreviewResponse?.data
       ?.map((item) => item.userName)
-      .filter(Boolean) ?? dashboard.attendance.yetToAttendList;
+      .filter(Boolean) ?? [];
   const totalParticipantCount =
     participantsResponse?.data?.summary?.total ??
     participants.super_admin.length +

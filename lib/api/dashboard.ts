@@ -207,7 +207,16 @@ export const getDashboardParticipants = async (
 
   if (!res.ok) {
     const data = await res.json().catch(() => null);
-    throw new Error(data?.message ?? "Failed to fetch dashboard participants");
+    const error = new Error(
+      data?.message ?? "Failed to fetch dashboard participants",
+    ) as Error & {
+      status?: number;
+      currentUserRole?: string | null;
+    };
+    error.status = res.status;
+    error.currentUserRole =
+      data?.data?.currentUserRole ?? data?.currentUserRole ?? null;
+    throw error;
   }
 
   return res.json();
