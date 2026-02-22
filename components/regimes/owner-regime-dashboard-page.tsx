@@ -193,6 +193,11 @@ export default function OwnerRegimeDashboardPage({
   const participantRoleFromError = (
     participantsError as Error & { currentUserRole?: string | null }
   )?.currentUserRole;
+  const resolvedRoleValue =
+    participantsResponse?.data?.currentUserRole ?? participantRoleFromError;
+  const isRoleResolved = Boolean(resolvedRoleValue);
+  const isRoleResolutionError =
+    !isParticipantsLoading && !isRoleResolved && isParticipantsError;
 
   const participants = useMemo<ParticipantState>(() => {
     const grouped: ParticipantState = {
@@ -282,11 +287,7 @@ export default function OwnerRegimeDashboardPage({
     [regimeSearchData],
   );
   const selectedRegime = regimeSearchData?.data?.[0];
-  const effectiveRole: AccessRole = resolveAccessRole(
-    participantsResponse?.data?.currentUserRole ??
-      participantRoleFromError ??
-      selectedRegime?.participant_role,
-  );
+  const effectiveRole: AccessRole = resolveAccessRole(resolvedRoleValue);
   const isCreatorOrSuper =
     effectiveRole === "creator" || effectiveRole === "super_admin";
   const isAdmin = effectiveRole === "admin";
@@ -621,9 +622,13 @@ export default function OwnerRegimeDashboardPage({
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto">
-            <span className="px-3 py-1 text-xs rounded-full font-semibold bg-teal-50 text-teal-700 border border-teal-100 uppercase tracking-wide">
-              {effectiveRole.replace("_", " ")}
-            </span>
+            {isRoleResolved ? (
+              <span className="px-3 py-1 text-xs rounded-full font-semibold bg-teal-50 text-teal-700 border border-teal-100 uppercase tracking-wide">
+                {effectiveRole.replace("_", " ")}
+              </span>
+            ) : (
+              <span className="h-6 w-24 rounded-full bg-gray-200 animate-pulse" />
+            )}
             <span
               className={`px-3 py-1 text-sm rounded-full font-semibold ${statusTone}`}
             >
@@ -634,6 +639,18 @@ export default function OwnerRegimeDashboardPage({
       </header>
 
       <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        {!isRoleResolved ? (
+          isRoleResolutionError ? (
+            <section className="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm text-rose-700">
+              {participantsError instanceof Error
+                ? participantsError.message
+                : "Unable to resolve your dashboard role."}
+            </section>
+          ) : (
+            <DashboardRoleSkeleton />
+          )
+        ) : (
+          <>
         {(isCreatorOrSuper || isAdmin || isMarketer) && (
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {canSeeFinancialData && (
@@ -1430,6 +1447,8 @@ export default function OwnerRegimeDashboardPage({
             </div>
           </section>
         )}
+          </>
+        )}
       </main>
     </div>
   );
@@ -1463,6 +1482,42 @@ function MiniCell({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg border border-gray-100 p-3">
       <p className="text-xs text-gray-500">{label}</p>
       <p className="font-semibold text-gray-900">{value}</p>
+    </div>
+  );
+}
+
+function DashboardRoleSkeleton() {
+  return (
+    <>
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <SectionSkeleton key={`stats-${index}`} className="h-28" />
+        ))}
+      </section>
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <SectionSkeleton className="h-[420px] lg:col-span-2" />
+        <SectionSkeleton className="h-[420px]" />
+      </section>
+      <SectionSkeleton className="h-[300px]" />
+      <SectionSkeleton className="h-[220px]" />
+      <SectionSkeleton className="h-[320px]" />
+    </>
+  );
+}
+
+function SectionSkeleton({ className }: { className?: string }) {
+  return (
+    <div
+      className={`rounded-2xl border border-gray-100 bg-white p-5 shadow-sm ${
+        className ?? ""
+      }`}
+    >
+      <div className="animate-pulse space-y-3">
+        <div className="h-5 w-40 rounded bg-gray-200" />
+        <div className="h-4 w-3/4 rounded bg-gray-100" />
+        <div className="h-4 w-2/3 rounded bg-gray-100" />
+        <div className="h-4 w-1/2 rounded bg-gray-100" />
+      </div>
     </div>
   );
 }
