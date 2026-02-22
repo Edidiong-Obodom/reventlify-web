@@ -268,7 +268,7 @@ export default function UserProfilePage() {
             <h3 className="text-xl font-bold">
               {showParticipantEvents ? "Participating Events" : "Created Events"}
             </h3>
-            <div className="inline-flex rounded-full bg-gray-100 p-1">
+            <div className="inline-flex w-fit self-start md:self-auto rounded-full bg-gray-100 p-1">
               <button
                 onClick={() => setShowParticipantEvents(false)}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
